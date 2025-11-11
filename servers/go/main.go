@@ -502,10 +502,19 @@ func renderSitePageWithBasePath(w http.ResponseWriter, r *http.Request, siteName
 		})
 	}
 
+	// 构建 page 对象,确保包含 name 字段
+	pageObject := make(map[string]interface{})
+	if pageConfig != nil {
+		for k, v := range pageConfig {
+			pageObject[k] = v
+		}
+	}
+	pageObject["name"] = pageName
+
 	// 构建上下文
 	ctx := pongo2.Context{
 		"config":    configWithBasePath,
-		"page":      pageConfig,
+		"page":      pageObject,
 		"site":      sitesConfig.Sites[siteName],
 		"site_name": siteName,
 		"platform":  sitesConfig.Platform,

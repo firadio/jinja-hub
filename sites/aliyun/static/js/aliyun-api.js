@@ -206,3 +206,81 @@ async function DescribeRegions(accessKeyId, accessKeySecret) {
         RegionId: 'cn-hangzhou'
     }, accessKeyId, accessKeySecret);
 }
+
+// 地域列表缓存管理
+const RegionCache = {
+    CACHE_KEY: 'aliyun_regions_cache',
+    CACHE_DURATION: 24 * 60 * 60 * 1000, // 24小时
+
+    // 从缓存获取地域列表
+    get() {
+        try {
+            const cached = localStorage.getItem(this.CACHE_KEY);
+            if (!cached) return null;
+
+            const data = JSON.parse(cached);
+            const now = Date.now();
+
+            // 检查缓存是否过期
+            if (now - data.timestamp > this.CACHE_DURATION) {
+                this.clear();
+                return null;
+            }
+
+            return data.regions;
+        } catch (e) {
+            console.error('Failed to read region cache:', e);
+            return null;
+        }
+    },
+
+    // 设置缓存
+    set(regions) {
+        try {
+            const data = {
+                regions: regions,
+                timestamp: Date.now()
+            };
+            localStorage.setItem(this.CACHE_KEY, JSON.stringify(data));
+        } catch (e) {
+            console.error('Failed to save region cache:', e);
+        }
+    },
+
+    // 清除缓存
+    clear() {
+        try {
+            localStorage.removeItem(this.CACHE_KEY);
+        } catch (e) {
+            console.error('Failed to clear region cache:', e);
+        }
+    },
+
+    // 加载地域列表 (优先从缓存读取)
+    async load(accessKeyId, accessKeySecret) {
+        // 先尝试从缓存读取
+        const cached = this.get();
+        if (cached) {
+            return cached;
+        }
+
+        // 缓存未命中,从API加载
+        try {
+            const response = await DescribeRegions(accessKeyId, accessKeySecret);
+            if (response && response.Regions && response.Regions.Region) {
+                const regions = response.Regions.Region.map(r => ({
+                    id: r.RegionId,
+                    name: r.LocalName
+                }));
+
+                // 保存到缓存
+                this.set(regions);
+                return regions;
+            }
+            return [];
+        } catch (e) {
+            console.error('Failed to load regions:', e);
+            return [];
+        }
+    }
+};

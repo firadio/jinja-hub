@@ -257,7 +257,7 @@ function renderSitePageWithBasePath(res, siteName, pageName, basePath) {
 
         const html = env.render(templatePath, {
             config: configWithBasePath,
-            page: pageConfig,
+            page: { ...(pageConfig || {}), name: pageName },
             site: siteInfo,
             site_name: siteName,
             platform: sitesConfig.platform || { name: 'Jinja Hub', description: '开放式前端开发平台' },

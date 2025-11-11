@@ -1,5 +1,58 @@
 // Alpine.js 组件定义
 
+// 通用地域加载 Mixin
+function regionMixin() {
+    return {
+        regions: [],
+        regionsLoading: false,
+
+        async loadRegions() {
+            if (this.regionsLoading || this.regions.length > 0) return;
+
+            this.regionsLoading = true;
+            try {
+                const keyStore = new AccessKeyStore();
+                const currentKey = keyStore.getCurrentKey();
+
+                if (!currentKey) {
+                    // 未登录时使用默认地域列表
+                    this.regions = [{ id: 'cn-hangzhou', name: '华东1(杭州)' }];
+                    // 如果还没有设置regionId,设置为第一个
+                    if (!this.regionId) {
+                        this.regionId = this.regions[0].id;
+                    }
+                    return;
+                }
+
+                // 使用缓存管理器加载地域列表
+                const regions = await RegionCache.load(
+                    currentKey.accessKeyId,
+                    currentKey.accessKeySecret
+                );
+
+                this.regions = regions;
+
+                // 确保regionId有效
+                if (this.regions.length > 0) {
+                    // 如果没有设置regionId,或者当前regionId不在列表中,选择第一个
+                    if (!this.regionId || !this.regions.find(r => r.id === this.regionId)) {
+                        this.regionId = this.regions[0].id;
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load regions:', e);
+                // 加载失败时使用默认列表
+                this.regions = [{ id: 'cn-hangzhou', name: '华东1(杭州)' }];
+                if (!this.regionId) {
+                    this.regionId = this.regions[0].id;
+                }
+            } finally {
+                this.regionsLoading = false;
+            }
+        }
+    };
+}
+
 // 密钥管理器组件
 function keyManager() {
     return {
@@ -127,6 +180,7 @@ function keyManager() {
 // ECS实例列表组件
 function ecsInstances() {
     return {
+        ...regionMixin(),
         instances: [],
         loading: false,
         error: '',
@@ -156,6 +210,7 @@ function ecsInstances() {
         async init() {
             const keyStore = new AccessKeyStore();
             this.regionId = keyStore.getDefaultRegion() || 'cn-hangzhou';
+            await this.loadRegions();
             await this.loadInstances();
         },
 
@@ -255,6 +310,7 @@ function ecsInstances() {
 // VPC列表组件
 function vpcList() {
     return {
+        ...regionMixin(),
         vpcs: [],
         loading: false,
         error: '',
@@ -270,6 +326,7 @@ function vpcList() {
         async init() {
             const keyStore = new AccessKeyStore();
             this.regionId = keyStore.getDefaultRegion() || 'cn-hangzhou';
+            await this.loadRegions();
             await this.loadVpcs();
         },
 
@@ -345,6 +402,7 @@ function vpcList() {
 // VSwitch列表组件
 function vswitchList() {
     return {
+        ...regionMixin(),
         vswitches: [],
         loading: false,
         error: '',
@@ -360,6 +418,7 @@ function vswitchList() {
         async init() {
             const keyStore = new AccessKeyStore();
             this.regionId = keyStore.getDefaultRegion() || 'cn-hangzhou';
+            await this.loadRegions();
             await this.loadVSwitches();
         },
 
@@ -435,6 +494,7 @@ function vswitchList() {
 // EIP列表组件
 function eipList() {
     return {
+        ...regionMixin(),
         eips: [],
         loading: false,
         error: '',
@@ -456,6 +516,7 @@ function eipList() {
         async init() {
             const keyStore = new AccessKeyStore();
             this.regionId = keyStore.getDefaultRegion() || 'cn-hangzhou';
+            await this.loadRegions();
             await this.loadEips();
         },
 
@@ -544,6 +605,8 @@ function eipList() {
 // 登录组件
 function loginPage() {
     return {
+        keys: [],
+        hasKeys: false,
         form: {
             name: '',
             accessKeyId: '',
@@ -552,9 +615,40 @@ function loginPage() {
         error: '',
         loading: false,
 
+        init() {
+            const keyStore = new AccessKeyStore();
+            this.keys = keyStore.getKeys();
+            this.hasKeys = this.keys.length > 0;
+        },
+
+        selectKey(index) {
+            const keyStore = new AccessKeyStore();
+            if (keyStore.switchKey(index)) {
+                const basePath = window.APP_CONFIG?.base_path || '';
+                window.location.href = `${basePath}/ecs_instances.html`;
+            }
+        },
+
+        deleteKey(index) {
+            const key = this.keys[index];
+            if (!confirm(`确定要删除密钥 "${key.name}" 吗？`)) {
+                return;
+            }
+
+            const keyStore = new AccessKeyStore();
+            if (keyStore.deleteKey(index)) {
+                this.keys = keyStore.getKeys();
+                this.hasKeys = this.keys.length > 0;
+            }
+        },
+
+        showAddForm() {
+            this.hasKeys = false;
+        },
+
         async login() {
-            if (!this.form.name || !this.form.accessKeyId || !this.form.accessKeySecret) {
-                this.error = '请填写完整信息';
+            if (!this.form.accessKeyId || !this.form.accessKeySecret) {
+                this.error = '请填写 AccessKey ID 和 AccessKey Secret';
                 return;
             }
 

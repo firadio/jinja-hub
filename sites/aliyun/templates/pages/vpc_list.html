@@ -11,10 +11,15 @@
         <div class="filters">
             <div class="filter-group">
                 <label>地域:</label>
-                <select x-model="regionId" @change="changeRegion()">
-                    {% for region in config.regions %}
-                    <option value="{{ region.id }}">{{ region.name }}</option>
-                    {% endfor %}
+                <select x-model="regionId" @change="changeRegion()" :disabled="regionsLoading">
+                    <template x-if="regionsLoading">
+                        <option>加载中...</option>
+                    </template>
+                    <template x-if="!regionsLoading">
+                        <template x-for="region in regions" :key="region.id">
+                            <option :value="region.id" x-text="region.name" :selected="regionId === region.id"></option>
+                        </template>
+                    </template>
                 </select>
             </div>
         </div>
@@ -83,5 +88,4 @@ window.APP_CONFIG = {{ config|json|safe }};
 </script>
 <script src="{{ base_path }}/static/js/aliyun-api.js"></script>
 <script src="{{ base_path }}/static/js/auth.js"></script>
-<script src="{{ base_path }}/static/js/alpine-components.js"></script>
 {% endblock %}

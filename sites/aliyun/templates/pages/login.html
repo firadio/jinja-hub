@@ -1,7 +1,7 @@
 {% extends "layouts/base.html" %}
 
 {% block content %}
-<main class="main-content" x-data="loginPage()">
+<div x-data="loginPage()">
     <div class="login-container">
         <div class="login-box">
             <h1>{{ config.site.title }}</h1>
@@ -9,7 +9,28 @@
 
             <div x-show="error" x-text="error" class="alert alert-error" x-cloak></div>
 
-            <form @submit.prevent="login()" class="login-form">
+            <!-- 密钥选择界面 -->
+            <div x-show="hasKeys" x-cloak>
+                <h3 style="margin-bottom: 20px;">选择密钥</h3>
+                <div style="margin-bottom: 20px;">
+                    <template x-for="(key, index) in keys" :key="index">
+                        <div style="padding: 15px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-weight: 600; margin-bottom: 5px;" x-text="key.name || '未命名'"></div>
+                                <div style="font-size: 12px; color: #666;" x-text="key.accessKeyId"></div>
+                            </div>
+                            <div style="display: flex; gap: 10px;">
+                                <button @click="selectKey(index)" class="btn btn-sm btn-primary">选择</button>
+                                <button @click="deleteKey(index)" class="btn btn-sm btn-danger">删除</button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                <button @click="showAddForm()" class="btn btn-outline btn-block" style="color: #ff6a00; border-color: #ff6a00;">添加新密钥</button>
+            </div>
+
+            <!-- 登录表单 -->
+            <form x-show="!hasKeys" @submit.prevent="login()" class="login-form" x-cloak>
                 <div class="form-group">
                     <label for="name">名称 (可选):</label>
                     <input type="text" x-model="form.name" placeholder="例如: 生产环境">
@@ -24,12 +45,12 @@
                 </div>
                 <button type="submit" class="btn btn-primary btn-block" :disabled="loading">
                     <span x-show="!loading">登录</span>
-                    <span x-show="loading" x-cloak>登录中...</span>
+                    <span x-show="loading">登录中...</span>
                 </button>
             </form>
         </div>
     </div>
-</main>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -37,5 +58,4 @@
 window.APP_CONFIG = {{ config|json|safe }};
 </script>
 <script src="{{ base_path }}/static/js/auth.js"></script>
-<script src="{{ base_path }}/static/js/alpine-components.js"></script>
 {% endblock %}

@@ -7,7 +7,7 @@
             <ul class="nav-menu">
                 {% for item in config.pages_array %}
                 {% if item.value.nav %}
-                <li><a href="{{ base_path }}/{{ item.key }}.html">{{ item.value.nav }}</a></li>
+                <li><a href="{{ base_path }}/{{ item.key }}.html" class="{% if page.name == item.key %}active{% endif %}">{{ item.value.nav }}</a></li>
                 {% endif %}
                 {% endfor %}
             </ul>
@@ -20,7 +20,7 @@
     </nav>
 
     <!-- 密钥管理对话框 -->
-    <div x-show="showModal" @click.self="closeModal()" class="modal" style="display: none;" x-cloak>
+    <div x-show="showModal" @click.self="closeModal()" class="modal" x-cloak>
         <div class="modal-content" style="max-width: 800px;" @click.stop>
             <span @click="closeModal()" class="close">&times;</span>
             <h2>密钥管理</h2>
@@ -76,7 +76,7 @@
     </div>
 
     <!-- 编辑密钥对话框 -->
-    <div x-show="showEditModal" @click.self="closeEditModal()" class="modal" style="display: none;" x-cloak>
+    <div x-show="showEditModal" @click.self="closeEditModal()" class="modal" x-cloak>
         <div class="modal-content" style="max-width: 500px;" @click.stop>
             <span @click="closeEditModal()" class="close">&times;</span>
             <h2>编辑密钥</h2>
@@ -151,5 +151,3 @@
     display: none !important;
 }
 </style>
-
-<script src="{{ base_path }}/static/js/alpine-components.js"></script>

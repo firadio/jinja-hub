@@ -71,10 +71,15 @@ body {
     border-bottom: 3px solid transparent;
 }
 
-.nav-menu li a:hover {
+.nav-menu li a:hover,
+.nav-menu li a.active {
     background-color: rgba(255, 255, 255, 0.1);
     color: #fff;
     border-bottom-color: #fff;
+}
+
+.nav-menu li a.active {
+    font-weight: 600;
 }
 
 .nav-right {
@@ -85,9 +90,56 @@ body {
 
 /* 主内容区 */
 .main-content {
+    min-height: calc(100vh - 60px);
+}
+
+.container {
     max-width: 1400px;
     margin: 0 auto;
-    padding: 0;
+    padding: 20px;
+}
+
+.container h1 {
+    font-size: 28px;
+    color: #333;
+    margin-bottom: 20px;
+}
+
+/* 筛选器 */
+.filters {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.filter-group label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #555;
+}
+
+.filter-group select,
+.filter-group input {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+    min-width: 180px;
+    transition: border-color 0.3s;
+}
+
+.filter-group select:focus,
+.filter-group input:focus {
+    outline: none;
+    border-color: #ff6a00;
 }
 
 /* 登录页面 */
@@ -250,16 +302,20 @@ body {
     overflow-x: auto;
 }
 
+.table,
 .data-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 14px;
 }
 
+.table thead,
 .data-table thead {
     background-color: #f5f7fa;
 }
 
+.table th,
+.table td,
 .data-table th,
 .data-table td {
     padding: 12px;
@@ -267,11 +323,13 @@ body {
     border-bottom: 1px solid #e8e8e8;
 }
 
+.table th,
 .data-table th {
     font-weight: 600;
     color: #555;
 }
 
+.table tbody tr:hover,
 .data-table tbody tr:hover {
     background-color: #f9f9f9;
 }
@@ -347,7 +405,6 @@ body {
 
 /* 模态框 */
 .modal {
-    display: none;
     position: fixed;
     z-index: 1000;
     left: 0;

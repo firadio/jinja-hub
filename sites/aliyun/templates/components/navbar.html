@@ -1,49 +1,102 @@
-<nav class="navbar">
-    <div class="nav-container">
-        <div class="nav-left">
-            {% include 'components/site_switcher_simple.html' %}
+<div x-data="keyManager()">
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-left">
+                {% include 'components/site_switcher_simple.html' %}
+            </div>
+            <ul class="nav-menu">
+                {% for item in config.pages_array %}
+                {% if item.value.nav %}
+                <li><a href="{{ base_path }}/{{ item.key }}.html">{{ item.value.nav }}</a></li>
+                {% endif %}
+                {% endfor %}
+            </ul>
+            <div class="nav-right">
+                <span x-text="keys[currentKeyId]?.name || '未登录'" class="current-key-name"></span>
+                <button @click="openModal()" class="btn btn-sm btn-outline">密钥管理</button>
+                <button @click="logout()" class="btn btn-sm btn-outline-danger">退出</button>
+            </div>
         </div>
-        <ul class="nav-menu">
-            {% for item in config.pages_array %}
-            {% if item.value.nav %}
-            <li><a href="{{ base_path }}/{{ item.key }}.html">{{ item.value.nav }}</a></li>
-            {% endif %}
-            {% endfor %}
-        </ul>
-        <div class="nav-right">
-            <span id="currentKeyName" class="current-key-name"></span>
-            <button id="manageKeysBtn" class="btn btn-sm btn-outline">密钥管理</button>
-            <button id="logoutBtn" class="btn btn-sm btn-outline-danger">退出</button>
+    </nav>
+
+    <!-- 密钥管理对话框 -->
+    <div x-show="showModal" @click.self="closeModal()" class="modal" style="display: none;" x-cloak>
+        <div class="modal-content" style="max-width: 800px;" @click.stop>
+            <span @click="closeModal()" class="close">&times;</span>
+            <h2>密钥管理</h2>
+
+            <!-- 密钥列表 -->
+            <div style="margin-bottom: 20px;">
+                <template x-if="keys.length === 0">
+                    <div style="text-align: center; padding: 40px; color: #999;">
+                        <div style="font-size: 48px; margin-bottom: 10px;">🔑</div>
+                        <p>暂无密钥，请添加一个新密钥</p>
+                    </div>
+                </template>
+
+                <template x-if="keys.length > 0">
+                    <div>
+                        <template x-for="(key, index) in keys" :key="index">
+                            <div class="key-item" :class="{ 'active': index === currentKeyId }">
+                                <div class="key-item-info">
+                                    <div class="key-item-name" x-text="key.name"></div>
+                                    <div class="key-item-id" x-text="key.accessKeyId"></div>
+                                </div>
+                                <div class="key-item-actions">
+                                    <button x-show="index !== currentKeyId" @click="switchKey(index)" class="btn btn-sm btn-primary">切换</button>
+                                    <button @click="openEditModal(index)" class="btn btn-sm" style="background-color: #17a2b8; color: white;">编辑</button>
+                                    <button @click="deleteKey(index)" class="btn btn-sm btn-danger">删除</button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+            </div>
+
+            <!-- 添加新密钥表单 -->
+            <div style="border-top: 2px solid #f0f0f0; padding-top: 20px;">
+                <h3 style="margin-bottom: 15px;">添加新密钥</h3>
+                <form @submit.prevent="addKey()">
+                    <div class="form-group">
+                        <label>名称:</label>
+                        <input type="text" x-model="addForm.name" placeholder="例如: 生产环境" required>
+                    </div>
+                    <div class="form-group">
+                        <label>AccessKey ID:</label>
+                        <input type="text" x-model="addForm.accessKeyId" required>
+                    </div>
+                    <div class="form-group">
+                        <label>AccessKey Secret:</label>
+                        <input type="password" x-model="addForm.accessKeySecret" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">添加密钥</button>
+                </form>
+            </div>
         </div>
     </div>
-</nav>
 
-<!-- 密钥管理对话框 -->
-<div id="keyManagerModal" class="modal">
-    <div class="modal-content" style="max-width: 800px;">
-        <span class="close" id="closeKeyManager">&times;</span>
-        <h2>密钥管理</h2>
-
-        <!-- 密钥列表 -->
-        <div id="keysList" style="margin-bottom: 20px;"></div>
-
-        <!-- 添加新密钥表单 -->
-        <div style="border-top: 2px solid #f0f0f0; padding-top: 20px;">
-            <h3 style="margin-bottom: 15px;">添加新密钥</h3>
-            <form id="addKeyForm">
+    <!-- 编辑密钥对话框 -->
+    <div x-show="showEditModal" @click.self="closeEditModal()" class="modal" style="display: none;" x-cloak>
+        <div class="modal-content" style="max-width: 500px;" @click.stop>
+            <span @click="closeEditModal()" class="close">&times;</span>
+            <h2>编辑密钥</h2>
+            <form @submit.prevent="saveEdit()">
                 <div class="form-group">
                     <label>名称:</label>
-                    <input type="text" name="name" placeholder="例如: 生产环境" required>
+                    <input type="text" x-model="editForm.name" required>
                 </div>
                 <div class="form-group">
                     <label>AccessKey ID:</label>
-                    <input type="text" name="accessKeyId" required>
+                    <input type="text" x-model="editForm.accessKeyId" required>
                 </div>
                 <div class="form-group">
                     <label>AccessKey Secret:</label>
-                    <input type="password" name="accessKeySecret" required>
+                    <input type="password" x-model="editForm.accessKeySecret" required>
                 </div>
-                <button type="submit" class="btn btn-primary">添加密钥</button>
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-primary">保存</button>
+                    <button type="button" @click="closeEditModal()" class="btn" style="background-color: #6c757d; color: white;">取消</button>
+                </div>
             </form>
         </div>
     </div>
@@ -93,4 +146,10 @@
     color: #ff6a00;
     font-size: 12px;
 }
+
+[x-cloak] {
+    display: none !important;
+}
 </style>
+
+<script src="{{ base_path }}/static/js/alpine-components.js"></script>

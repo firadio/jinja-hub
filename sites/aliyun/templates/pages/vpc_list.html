@@ -1,45 +1,78 @@
 {% extends "layouts/base.html" %}
 
-{% block extra_css %}
-{% endblock %}
-
 {% block content %}
-{% include "components/navbar.html" %}
+{% include 'components/navbar.html' %}
 
-<main class="main-content">
-    <div class="page-container">
-        <div class="page-header">
-            <h1>{{ page.title }}</h1>
-            <div class="page-actions">
-                <div class="search-box">
-                    <input type="text" id="searchInput" placeholder="搜索VPC名称或ID...">
-                </div>
-                {% include "components/region_selector.html" %}
+<main class="main-content" x-data="vpcList()">
+    <div class="container">
+        <h1>VPC 列表</h1>
+
+        <!-- 区域选择 -->
+        <div class="filters">
+            <div class="filter-group">
+                <label>地域:</label>
+                <select x-model="regionId" @change="changeRegion()">
+                    {% for region in config.regions %}
+                    <option value="{{ region.id }}">{{ region.name }}</option>
+                    {% endfor %}
+                </select>
             </div>
         </div>
 
-        <div id="loading" class="loading">加载中...</div>
-        <div id="error" class="alert alert-error" style="display:none;"></div>
+        <!-- 错误提示 -->
+        <div x-show="error" x-text="error" class="alert alert-error" x-cloak></div>
 
-        <div class="table-container">
-            <table class="data-table">
+        <!-- 加载中 -->
+        <div x-show="loading" class="loading" x-cloak>加载中...</div>
+
+        <!-- VPC表格 -->
+        <div x-show="!loading && !error" class="table-container" x-cloak>
+            <table class="table">
                 <thead>
                     <tr>
-                        <th>VPC ID</th>
                         <th>VPC名称</th>
+                        <th>VPC ID</th>
+                        <th>CIDR块</th>
                         <th>状态</th>
-                        <th>IPv4网段</th>
-                        <th>IPv6网段</th>
-                        <th>地域</th>
-                        <th>交换机数量</th>
                         <th>创建时间</th>
                     </tr>
                 </thead>
-                <tbody id="vpcsBody"></tbody>
+                <tbody>
+                    <template x-if="vpcs.length === 0">
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 40px;">暂无数据</td>
+                        </tr>
+                    </template>
+                    <template x-for="vpc in vpcs" :key="vpc.VpcId">
+                        <tr>
+                            <td x-text="vpc.VpcName || '-'"></td>
+                            <td x-text="vpc.VpcId"></td>
+                            <td x-text="vpc.CidrBlock"></td>
+                            <td>
+                                <span class="status-badge" :class="`status-${formatStatus(vpc.Status).class}`" x-text="formatStatus(vpc.Status).text"></span>
+                            </td>
+                            <td x-text="formatTime(vpc.CreationTime)"></td>
+                        </tr>
+                    </template>
+                </tbody>
             </table>
         </div>
 
-        <div id="pagination" class="pagination"></div>
+        <!-- 分页 -->
+        <div x-show="!loading && totalPages > 1" class="pagination" x-cloak>
+            <button @click="loadVpcs(currentPage - 1)" :disabled="currentPage === 1">上一页</button>
+            <span class="page-number" x-text="`第 ${currentPage} / ${totalPages} 页`"></span>
+            <button @click="loadVpcs(currentPage + 1)" :disabled="currentPage === totalPages">下一页</button>
+            <span class="pagination-info" x-text="`共 ${totalCount} 条`"></span>
+            <div class="page-size-selector">
+                <label>每页显示:</label>
+                <select x-model="pageSize" @change="changePageSize()">
+                    <option value="20">20条</option>
+                    <option value="50">50条</option>
+                    <option value="100">100条</option>
+                </select>
+            </div>
+        </div>
     </div>
 </main>
 {% endblock %}
@@ -48,8 +81,7 @@
 <script>
 window.APP_CONFIG = {{ config|json|safe }};
 </script>
-<script src="{{ base_path }}/static/js/auth.js"></script>
-<script src="{{ base_path }}/static/js/common.js"></script>
 <script src="{{ base_path }}/static/js/aliyun-api.js"></script>
-<script src="{{ base_path }}/static/js/vpc-list.js"></script>
+<script src="{{ base_path }}/static/js/auth.js"></script>
+<script src="{{ base_path }}/static/js/alpine-components.js"></script>
 {% endblock %}

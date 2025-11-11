@@ -1,40 +1,31 @@
 {% extends "layouts/base.html" %}
 
-{% block extra_css %}
-{% endblock %}
-
 {% block content %}
-<main class="main-content">
+<main class="main-content" x-data="loginPage()">
     <div class="login-container">
         <div class="login-box">
             <h1>{{ config.site.title }}</h1>
             <p class="login-subtitle">{{ config.site.description }}</p>
 
-            <div id="error" class="alert alert-error" style="display:none;"></div>
-            <div id="info" class="alert alert-info" style="display:none;"></div>
+            <div x-show="error" x-text="error" class="alert alert-error" x-cloak></div>
 
-            <form id="loginForm" class="login-form">
+            <form @submit.prevent="login()" class="login-form">
                 <div class="form-group">
                     <label for="name">名称 (可选):</label>
-                    <input type="text" id="name" name="name" placeholder="例如: 生产环境">
+                    <input type="text" x-model="form.name" placeholder="例如: 生产环境">
                 </div>
                 <div class="form-group">
                     <label for="accessKeyId">AccessKey ID:</label>
-                    <input type="text" id="accessKeyId" name="accessKeyId" required placeholder="请输入 AccessKey ID">
+                    <input type="text" x-model="form.accessKeyId" required placeholder="请输入 AccessKey ID">
                 </div>
                 <div class="form-group">
                     <label for="accessKeySecret">AccessKey Secret:</label>
-                    <input type="password" id="accessKeySecret" name="accessKeySecret" required placeholder="请输入 AccessKey Secret">
+                    <input type="password" x-model="form.accessKeySecret" required placeholder="请输入 AccessKey Secret">
                 </div>
-                <div class="form-group">
-                    <label for="region">默认地域:</label>
-                    <select id="region" name="region">
-                        {% for region in config.regions %}
-                        <option value="{{ region.id }}">{{ region.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <button type="submit" class="btn btn-primary btn-block">登录</button>
+                <button type="submit" class="btn btn-primary btn-block" :disabled="loading">
+                    <span x-show="!loading">登录</span>
+                    <span x-show="loading" x-cloak>登录中...</span>
+                </button>
             </form>
         </div>
     </div>
@@ -43,8 +34,8 @@
 
 {% block extra_js %}
 <script>
-// 配置从后端传入
 window.APP_CONFIG = {{ config|json|safe }};
 </script>
 <script src="{{ base_path }}/static/js/auth.js"></script>
+<script src="{{ base_path }}/static/js/alpine-components.js"></script>
 {% endblock %}

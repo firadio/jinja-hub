@@ -1,93 +1,104 @@
 {% extends "layouts/base.html" %}
 
-{% block extra_css %}
-{% endblock %}
-
 {% block content %}
-{% include "components/navbar.html" %}
+{% include 'components/navbar.html' %}
 
-<main class="main-content">
-    <div class="page-container">
-        <div class="page-header">
-            <h1>{{ page.title }}</h1>
-            <div class="page-actions">
-                {% include "components/region_selector.html" %}
-                <button id="searchToggleBtn" class="btn btn-sm" style="background-color: #667eea; color: white;">高级搜索</button>
+<main class="main-content" x-data="ecsInstances()">
+    <div class="container">
+        <h1>ECS 实例列表</h1>
+
+        <!-- 区域选择和搜索 -->
+        <div class="filters">
+            <div class="filter-group">
+                <label>地域:</label>
+                <select x-model="regionId" @change="changeRegion()">
+                    {% for region in config.regions %}
+                    <option value="{{ region.id }}">{{ region.name }}</option>
+                    {% endfor %}
+                </select>
             </div>
+            <div class="filter-group">
+                <input type="text" x-model="filters.instanceName" placeholder="实例名称" @keyup.enter="search()">
+            </div>
+            <div class="filter-group">
+                <input type="text" x-model="filters.privateIp" placeholder="私网IP" @keyup.enter="search()">
+            </div>
+            <div class="filter-group">
+                <input type="text" x-model="filters.publicIp" placeholder="公网IP" @keyup.enter="search()">
+            </div>
+            <div class="filter-group">
+                <input type="text" x-model="filters.eipAddress" placeholder="EIP地址" @keyup.enter="search()">
+            </div>
+            <button @click="search()" class="btn btn-primary">搜索</button>
         </div>
 
-        <!-- 搜索面板 -->
-        <div id="searchPanel" class="search-panel" style="display: none;">
-            <div class="search-form">
-                <div class="search-row">
-                    <div class="search-field">
-                        <label>实例名称</label>
-                        <input type="text" id="searchInstanceName" placeholder="支持模糊搜索">
-                    </div>
-                    <div class="search-field">
-                        <label>实例ID</label>
-                        <input type="text" id="searchInstanceId" placeholder="精确匹配，如: i-bp1abc123">
-                    </div>
-                </div>
-                <div class="search-row">
-                    <div class="search-field">
-                        <label>内网IP</label>
-                        <input type="text" id="searchPrivateIp" placeholder="精确匹配，如: 192.168.1.10">
-                    </div>
-                    <div class="search-field">
-                        <label>公网IP</label>
-                        <input type="text" id="searchPublicIp" placeholder="精确匹配，如: 47.96.1.1">
-                    </div>
-                </div>
-                <div class="search-row">
-                    <div class="search-field">
-                        <label>EIP地址</label>
-                        <input type="text" id="searchEipAddress" placeholder="精确匹配，如: 47.96.1.1">
-                    </div>
-                    <div class="search-field">
-                        <!-- 空白占位 -->
-                    </div>
-                </div>
-                <div class="search-actions">
-                    <button id="searchBtn" class="btn btn-primary">搜索</button>
-                    <button id="resetSearchBtn" class="btn">重置</button>
-                </div>
-            </div>
-        </div>
+        <!-- 错误提示 -->
+        <div x-show="error" x-text="error" class="alert alert-error" x-cloak></div>
 
-        <div id="loading" class="loading">加载中...</div>
-        <div id="error" class="alert alert-error" style="display:none;"></div>
+        <!-- 加载中 -->
+        <div x-show="loading" class="loading" x-cloak>加载中...</div>
 
-        <div class="table-container">
-            <table class="data-table">
+        <!-- 实例表格 -->
+        <div x-show="!loading && !error" class="table-container" x-cloak>
+            <table class="table">
                 <thead>
                     <tr>
-                        <th>实例ID</th>
                         <th>实例名称</th>
+                        <th>实例ID</th>
                         <th>状态</th>
+                        <th>私网IP</th>
                         <th>公网IP</th>
-                        <th>内网IP</th>
-                        <th>实例规格</th>
-                        <th>地域/可用区</th>
+                        <th>EIP</th>
                         <th>创建时间</th>
                     </tr>
                 </thead>
-                <tbody id="instancesBody"></tbody>
+                <tbody>
+                    <template x-if="instances.length === 0">
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: 40px;">暂无数据</td>
+                        </tr>
+                    </template>
+                    <template x-for="instance in instances" :key="instance.InstanceId">
+                        <tr>
+                            <td x-text="instance.InstanceName || '-'"></td>
+                            <td x-text="instance.InstanceId"></td>
+                            <td>
+                                <span class="status-badge" :class="`status-${formatStatus(instance.Status).class}`" x-text="formatStatus(instance.Status).text"></span>
+                            </td>
+                            <td x-text="instance.VpcAttributes?.PrivateIpAddress?.IpAddress?.[0] || '-'"></td>
+                            <td x-text="instance.PublicIpAddress?.IpAddress?.[0] || '-'"></td>
+                            <td x-text="instance.EipAddress?.IpAddress || '-'"></td>
+                            <td x-text="formatTime(instance.CreationTime)"></td>
+                        </tr>
+                    </template>
+                </tbody>
             </table>
         </div>
 
-        <div id="pagination" class="pagination"></div>
+        <!-- 分页 -->
+        <div x-show="!loading && totalPages > 1" class="pagination" x-cloak>
+            <button @click="prevPage()" :disabled="currentPage === 1">上一页</button>
+            <span class="page-number" x-text="`第 ${currentPage} / ${totalPages} 页`"></span>
+            <button @click="nextPage()" :disabled="currentPage === totalPages">下一页</button>
+            <span class="pagination-info" x-text="`共 ${totalCount} 条，显示 ${startItem}-${endItem}`"></span>
+            <div class="page-size-selector">
+                <label>每页显示:</label>
+                <select x-model="pageSize" @change="changePageSize()">
+                    <option value="20">20条</option>
+                    <option value="50">50条</option>
+                    <option value="100">100条</option>
+                </select>
+            </div>
+        </div>
     </div>
 </main>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-// 配置和API信息从后端传入
 window.APP_CONFIG = {{ config|json|safe }};
 </script>
-<script src="{{ base_path }}/static/js/auth.js"></script>
-<script src="{{ base_path }}/static/js/common.js"></script>
 <script src="{{ base_path }}/static/js/aliyun-api.js"></script>
-<script src="{{ base_path }}/static/js/ecs-instances.js"></script>
+<script src="{{ base_path }}/static/js/auth.js"></script>
+<script src="{{ base_path }}/static/js/alpine-components.js"></script>
 {% endblock %}

@@ -1,0 +1,77 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}{{ page.title }} - {{ config.site_title }}{% endblock %}
+
+{% block content %}
+<div class="demo-container">
+    <h1>🎨 欢迎来到演示站点</h1>
+    <p class="subtitle">{{ page.description }}</p>
+
+    <div class="card">
+        <h2>站点切换功能</h2>
+        <p>点击左上角的站点切换器,可以在不同站点之间切换:</p>
+        <ul>
+            <li>查看所有可用站点</li>
+            <li>返回平台首页</li>
+            <li>快速访问其他项目</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h2>当前站点信息</h2>
+        <table>
+            <tr>
+                <td><strong>站点名称:</strong></td>
+                <td>{{ site.name }}</td>
+            </tr>
+            <tr>
+                <td><strong>站点ID:</strong></td>
+                <td>{{ site_name }}</td>
+            </tr>
+            <tr>
+                <td><strong>描述:</strong></td>
+                <td>{{ site.description }}</td>
+            </tr>
+            <tr>
+                <td><strong>分类:</strong></td>
+                <td>{{ site.category }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>平台信息</h2>
+        <table>
+            <tr>
+                <td><strong>平台名称:</strong></td>
+                <td>{{ platform.name }}</td>
+            </tr>
+            <tr>
+                <td><strong>描述:</strong></td>
+                <td>{{ platform.description }}</td>
+            </tr>
+            <tr>
+                <td><strong>版本:</strong></td>
+                <td>{{ platform.version }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>所有站点列表</h2>
+        <ul class="site-list">
+            {% for site_id, site_info in all_sites %}
+            <li>
+                <a href="/{{ site_id }}/">
+                    <span class="site-icon">{{ site_info.icon or '🌐' }}</span>
+                    <strong>{{ site_info.name }}</strong>
+                    <span class="badge {% if site_info.enabled %}badge-success{% else %}badge-disabled{% endif %}">
+                        {{ '已启用' if site_info.enabled else '未启用' }}
+                    </span>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endblock %}

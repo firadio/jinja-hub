@@ -1,0 +1,55 @@
+{% extends "layouts/base.html" %}
+
+{% block extra_css %}
+{% endblock %}
+
+{% block content %}
+{% include "components/navbar.html" %}
+
+<main class="main-content">
+    <div class="page-container">
+        <div class="page-header">
+            <h1>{{ page.title }}</h1>
+            <div class="page-actions">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="搜索VPC名称或ID...">
+                </div>
+                {% include "components/region_selector.html" %}
+            </div>
+        </div>
+
+        <div id="loading" class="loading">加载中...</div>
+        <div id="error" class="alert alert-error" style="display:none;"></div>
+
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>VPC ID</th>
+                        <th>VPC名称</th>
+                        <th>状态</th>
+                        <th>IPv4网段</th>
+                        <th>IPv6网段</th>
+                        <th>地域</th>
+                        <th>交换机数量</th>
+                        <th>创建时间</th>
+                    </tr>
+                </thead>
+                <tbody id="vpcsBody"></tbody>
+            </table>
+        </div>
+
+        <div id="pagination" class="pagination"></div>
+    </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+window.APP_CONFIG = {{ config|json|safe }};
+</script>
+<script src="{{ base_path }}/static/js/auth.js"></script>
+<script src="{{ base_path }}/static/js/common.js"></script>
+<script src="{{ base_path }}/static/js/aliyun-api.js"></script>
+<script src="{{ base_path }}/static/js/vpc-list.js"></script>
+{% endblock %}

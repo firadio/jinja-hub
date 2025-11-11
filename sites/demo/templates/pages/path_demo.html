@@ -1,0 +1,195 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}路径自动适配演示{% endblock %}
+
+{% block content %}
+<div class="demo-container">
+    <h1>🔗 路径自动适配演示</h1>
+    <p class="subtitle">查看不同访问方式下路径的自动调整</p>
+
+    <div class="card">
+        <h2>当前访问信息</h2>
+        <table>
+            <tr>
+                <td><strong>站点名称:</strong></td>
+                <td>{{ site.name }}</td>
+            </tr>
+            <tr>
+                <td><strong>站点ID:</strong></td>
+                <td>{{ site_name }}</td>
+            </tr>
+            <tr>
+                <td><strong>基础路径 (base_path):</strong></td>
+                <td><code>{{ base_path }}</code></td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>路径模式说明</h2>
+        <div style="background: #f0f9ff; padding: 15px; border-radius: 6px; border-left: 4px solid #0ea5e9;">
+            <p style="margin: 0;"><strong>当前模式:</strong></p>
+            {% if base_path == '/' %}
+            <p style="color: #0284c7; margin: 5px 0 0 0;">✓ 域名访问模式 - base_path = "/"</p>
+            <p style="color: #64748b; margin: 5px 0 0 0; font-size: 0.9rem;">
+                通过域名直接访问 (例如: demo.example.com)
+            </p>
+            {% else %}
+            <p style="color: #0284c7; margin: 5px 0 0 0;">✓ 路径访问模式 - base_path = "{{ base_path }}"</p>
+            <p style="color: #64748b; margin: 5px 0 0 0; font-size: 0.9rem;">
+                通过路径访问 (例如: example.com{{ base_path }}/)
+            </p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>自动适配示例</h2>
+
+        <h3>1. 静态文件</h3>
+        <div class="code-example">
+            <p><strong>模板代码:</strong></p>
+            <pre><code>&lt;link href="{{ '{{' }} base_path }}/static/css/style.css"&gt;</code></pre>
+            <p><strong>渲染结果:</strong></p>
+            <pre><code>&lt;link href="{{ base_path }}/static/css/style.css"&gt;</code></pre>
+        </div>
+
+        <h3>2. 页面链接</h3>
+        <div class="code-example">
+            <p><strong>模板代码:</strong></p>
+            <pre><code>&lt;a href="{{ '{{' }} base_path }}/"&gt;首页&lt;/a&gt;</code></pre>
+            <p><strong>渲染结果:</strong></p>
+            <pre><code>&lt;a href="{{ base_path }}/"&gt;首页&lt;/a&gt;</code></pre>
+            <p><strong>实际链接:</strong></p>
+            <a href="{{ base_path }}/" style="color: #0ea5e9;">点击访问首页</a>
+        </div>
+
+        <h3>3. API 调用</h3>
+        <div class="code-example">
+            <p><strong>模板代码:</strong></p>
+            <pre><code>fetch('{{ '{{' }} base_path }}/api/config')</code></pre>
+            <p><strong>渲染结果:</strong></p>
+            <pre><code>fetch('{{ base_path }}/api/config')</code></pre>
+            <button onclick="testAPI()" class="btn">测试 API 调用</button>
+            <div id="apiResult" style="margin-top: 10px;"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>测试链接</h2>
+        <ul style="list-style: none; padding: 0;">
+            <li style="margin: 10px 0;">
+                <a href="{{ base_path }}/" class="test-link">{{ base_path }}/ (首页)</a>
+            </li>
+            <li style="margin: 10px 0;">
+                <a href="{{ base_path }}/index.html" class="test-link">{{ base_path }}/index.html</a>
+            </li>
+            <li style="margin: 10px 0;">
+                <a href="{{ base_path }}/path_demo.html" class="test-link">{{ base_path }}/path_demo.html (当前页)</a>
+            </li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h2>如何测试域名模式</h2>
+        <ol>
+            <li>在 <code>sites/sites.json</code> 中配置域名:
+                <pre><code>"demo": {
+  "domains": ["demo.localhost"]
+}</code></pre>
+            </li>
+            <li>访问 <code>http://demo.localhost:8080/</code></li>
+            <li>观察 base_path 变化: <code>/demo</code> → <code>/</code></li>
+        </ol>
+    </div>
+</div>
+
+<style>
+.card h3 {
+    margin-top: 20px;
+    margin-bottom: 10px;
+    color: #475569;
+    font-size: 1.1rem;
+}
+
+.code-example {
+    background: #f8fafc;
+    padding: 15px;
+    border-radius: 6px;
+    margin: 15px 0;
+}
+
+.code-example p {
+    margin: 8px 0;
+    color: #64748b;
+}
+
+.code-example pre {
+    background: #1e293b;
+    color: #e2e8f0;
+    padding: 12px;
+    border-radius: 4px;
+    overflow-x: auto;
+    margin: 8px 0;
+}
+
+.code-example code {
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+}
+
+.btn {
+    background: #0ea5e9;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.btn:hover {
+    background: #0284c7;
+}
+
+.test-link {
+    display: inline-block;
+    padding: 8px 16px;
+    background: #ede9fe;
+    color: #7c3aed;
+    text-decoration: none;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.test-link:hover {
+    background: #ddd6fe;
+    transform: translateX(4px);
+}
+</style>
+
+<script>
+function testAPI() {
+    const resultDiv = document.getElementById('apiResult');
+    resultDiv.innerHTML = '<p style="color: #64748b;">加载中...</p>';
+
+    fetch('{{ base_path }}/api/config')
+        .then(res => res.json())
+        .then(data => {
+            resultDiv.innerHTML = `
+                <div style="background: #d1fae5; color: #065f46; padding: 10px; border-radius: 4px; margin-top: 8px;">
+                    <strong>✓ API 调用成功!</strong>
+                    <pre style="background: #f0fdf4; color: #166534; padding: 8px; border-radius: 4px; margin-top: 8px; overflow-x: auto;">${JSON.stringify(data, null, 2)}</pre>
+                </div>
+            `;
+        })
+        .catch(err => {
+            resultDiv.innerHTML = `
+                <div style="background: #fee2e2; color: #991b1b; padding: 10px; border-radius: 4px; margin-top: 8px;">
+                    <strong>✗ API 调用失败:</strong> ${err.message}
+                </div>
+            `;
+        });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,154 @@
+<!-- 站点切换器组件 - 简洁样式 -->
+<div class="site-switcher">
+    <button class="nav-brand site-switcher-btn" id="siteSwitcherBtn">
+        {{ config.site.title }}
+        <span class="dropdown-arrow">▼</span>
+    </button>
+    <div class="site-switcher-dropdown" id="siteSwitcherDropdown">
+        <a href="/" class="dropdown-item platform-home">
+            🏠 {{ platform.name or 'Jinja Hub' }}
+        </a>
+        <div class="dropdown-divider"></div>
+        {% for site in all_sites %}
+            {% if site.info.enabled %}
+            <a href="/{{ site.id }}/" class="dropdown-item {% if site.id == site_name %}active{% endif %}">
+                <span class="site-icon">{% if site.info.icon %}{{ site.info.icon }}{% else %}🌐{% endif %}</span>
+                <span class="site-name">{{ site.info.name }}</span>
+                {% if site.id == site_name %}
+                <span class="check-mark">✓</span>
+                {% endif %}
+            </a>
+            {% endif %}
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+/* 站点切换器 - 简洁样式 */
+.site-switcher {
+    position: relative;
+    display: inline-block;
+}
+
+.site-switcher-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0;
+    transition: opacity 0.2s;
+}
+
+.site-switcher-btn:hover {
+    opacity: 0.8;
+}
+
+.dropdown-arrow {
+    font-size: 10px;
+    color: #999;
+    transition: transform 0.2s;
+}
+
+.site-switcher.active .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+.site-switcher-dropdown {
+    position: absolute;
+    top: calc(100% + 12px);
+    left: 0;
+    min-width: 240px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.2s;
+    z-index: 1000;
+}
+
+.site-switcher.active .site-switcher-dropdown {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    color: #374151;
+    text-decoration: none;
+    transition: background 0.15s;
+}
+
+.dropdown-item:hover {
+    background: #f3f4f6;
+}
+
+.dropdown-item.active {
+    background: #fff7ed;
+}
+
+.dropdown-item.platform-home {
+    color: #667eea;
+    font-weight: 600;
+}
+
+.dropdown-item.platform-home:hover {
+    background: #f5f3ff;
+}
+
+.dropdown-divider {
+    height: 1px;
+    background: #e5e7eb;
+    margin: 4px 0;
+}
+
+.site-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.site-name {
+    flex: 1;
+    font-size: 14px;
+}
+
+.check-mark {
+    color: #ff6a00;
+    font-weight: bold;
+    font-size: 16px;
+}
+</style>
+
+<script>
+// 站点切换器交互
+(function() {
+    const switcher = document.querySelector('.site-switcher');
+    const btn = document.getElementById('siteSwitcherBtn');
+    const dropdown = document.getElementById('siteSwitcherDropdown');
+
+    if (!btn || !dropdown) return;
+
+    // 切换下拉菜单
+    btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        switcher.classList.toggle('active');
+    });
+
+    // 点击其他地方关闭
+    document.addEventListener('click', function() {
+        switcher.classList.remove('active');
+    });
+
+    // 阻止下拉菜单内部点击冒泡
+    dropdown.addEventListener('click', function(e) {
+        e.stopPropagation();
+    });
+})();
+</script>

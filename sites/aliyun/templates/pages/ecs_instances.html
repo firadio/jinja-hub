@@ -1,0 +1,93 @@
+{% extends "layouts/base.html" %}
+
+{% block extra_css %}
+{% endblock %}
+
+{% block content %}
+{% include "components/navbar.html" %}
+
+<main class="main-content">
+    <div class="page-container">
+        <div class="page-header">
+            <h1>{{ page.title }}</h1>
+            <div class="page-actions">
+                {% include "components/region_selector.html" %}
+                <button id="searchToggleBtn" class="btn btn-sm" style="background-color: #667eea; color: white;">高级搜索</button>
+            </div>
+        </div>
+
+        <!-- 搜索面板 -->
+        <div id="searchPanel" class="search-panel" style="display: none;">
+            <div class="search-form">
+                <div class="search-row">
+                    <div class="search-field">
+                        <label>实例名称</label>
+                        <input type="text" id="searchInstanceName" placeholder="支持模糊搜索">
+                    </div>
+                    <div class="search-field">
+                        <label>实例ID</label>
+                        <input type="text" id="searchInstanceId" placeholder="精确匹配，如: i-bp1abc123">
+                    </div>
+                </div>
+                <div class="search-row">
+                    <div class="search-field">
+                        <label>内网IP</label>
+                        <input type="text" id="searchPrivateIp" placeholder="精确匹配，如: 192.168.1.10">
+                    </div>
+                    <div class="search-field">
+                        <label>公网IP</label>
+                        <input type="text" id="searchPublicIp" placeholder="精确匹配，如: 47.96.1.1">
+                    </div>
+                </div>
+                <div class="search-row">
+                    <div class="search-field">
+                        <label>EIP地址</label>
+                        <input type="text" id="searchEipAddress" placeholder="精确匹配，如: 47.96.1.1">
+                    </div>
+                    <div class="search-field">
+                        <!-- 空白占位 -->
+                    </div>
+                </div>
+                <div class="search-actions">
+                    <button id="searchBtn" class="btn btn-primary">搜索</button>
+                    <button id="resetSearchBtn" class="btn">重置</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="loading" class="loading">加载中...</div>
+        <div id="error" class="alert alert-error" style="display:none;"></div>
+
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>实例ID</th>
+                        <th>实例名称</th>
+                        <th>状态</th>
+                        <th>公网IP</th>
+                        <th>内网IP</th>
+                        <th>实例规格</th>
+                        <th>地域/可用区</th>
+                        <th>创建时间</th>
+                    </tr>
+                </thead>
+                <tbody id="instancesBody"></tbody>
+            </table>
+        </div>
+
+        <div id="pagination" class="pagination"></div>
+    </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 配置和API信息从后端传入
+window.APP_CONFIG = {{ config|json|safe }};
+</script>
+<script src="{{ base_path }}/static/js/auth.js"></script>
+<script src="{{ base_path }}/static/js/common.js"></script>
+<script src="{{ base_path }}/static/js/aliyun-api.js"></script>
+<script src="{{ base_path }}/static/js/ecs-instances.js"></script>
+{% endblock %}

@@ -1,0 +1,15 @@
+{
+  "site_name": "demo",
+  "site_title": "演示站点",
+  "api_base_url": "/demo/api",
+  "pages": {
+    "index": {
+      "title": "首页",
+      "description": "演示站点首页"
+    },
+    "path_demo": {
+      "title": "路径自动适配演示",
+      "description": "展示 base_path 变量的使用"
+    }
+  }
+}

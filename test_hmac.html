@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test HMAC-SHA1</title>
+</head>
+<body>
+    <h1>HMAC-SHA1 测试</h1>
+    <div id="result"></div>
+    <script src="../sites/aliyun/static/js/aliyun-api.js"></script>
+    <script>
+        async function test() {
+            const key = "test_key&";
+            const message = "GET&%2F&test_message";
+            
+            const resultDiv = document.getElementById('result');
+            
+            // 测试 Web Crypto API (如果可用)
+            if (typeof crypto !== 'undefined' && crypto.subtle) {
+                try {
+                    const encoder = new TextEncoder();
+                    const keyData = encoder.encode(key);
+                    const messageData = encoder.encode(message);
+                    
+                    const cryptoKey = await crypto.subtle.importKey(
+                        'raw',
+                        keyData,
+                        { name: 'HMAC', hash: 'SHA-1' },
+                        false,
+                        ['sign']
+                    );
+                    
+                    const signature = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
+                    const nativeResult = btoa(String.fromCharCode(...new Uint8Array(signature)));
+                    resultDiv.innerHTML += '<p><strong>Native Web Crypto:</strong> ' + nativeResult + '</p>';
+                } catch (e) {
+                    resultDiv.innerHTML += '<p><strong>Native Web Crypto Error:</strong> ' + e.message + '</p>';
+                }
+            }
+            
+            // 测试降级方案
+            const fallbackResult = await signHmacSha1ToBase64(key, message);
+            resultDiv.innerHTML += '<p><strong>Fallback JS:</strong> ' + fallbackResult + '</p>';
+        }
+        
+        test();
+    </script>
+</body>
+</html>

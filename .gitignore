@@ -1,0 +1,52 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Dependency directories
+vendor/
+
+# Go workspace file
+go.work
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+tmp/
+temp/
+
+# PHP dependencies
+vendor/
+composer.lock
+
+# Node.js dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Python dependencies (if needed in future)
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+.venv/

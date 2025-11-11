@@ -1,0 +1,96 @@
+<nav class="navbar">
+    <div class="nav-container">
+        <div class="nav-left">
+            {% include 'components/site_switcher_simple.html' %}
+        </div>
+        <ul class="nav-menu">
+            {% for item in config.pages_array %}
+            {% if item.value.nav %}
+            <li><a href="{{ base_path }}/{{ item.key }}.html">{{ item.value.nav }}</a></li>
+            {% endif %}
+            {% endfor %}
+        </ul>
+        <div class="nav-right">
+            <span id="currentKeyName" class="current-key-name"></span>
+            <button id="manageKeysBtn" class="btn btn-sm btn-outline">密钥管理</button>
+            <button id="logoutBtn" class="btn btn-sm btn-outline-danger">退出</button>
+        </div>
+    </div>
+</nav>
+
+<!-- 密钥管理对话框 -->
+<div id="keyManagerModal" class="modal">
+    <div class="modal-content" style="max-width: 800px;">
+        <span class="close" id="closeKeyManager">&times;</span>
+        <h2>密钥管理</h2>
+
+        <!-- 密钥列表 -->
+        <div id="keysList" style="margin-bottom: 20px;"></div>
+
+        <!-- 添加新密钥表单 -->
+        <div style="border-top: 2px solid #f0f0f0; padding-top: 20px;">
+            <h3 style="margin-bottom: 15px;">添加新密钥</h3>
+            <form id="addKeyForm">
+                <div class="form-group">
+                    <label>名称:</label>
+                    <input type="text" name="name" placeholder="例如: 生产环境" required>
+                </div>
+                <div class="form-group">
+                    <label>AccessKey ID:</label>
+                    <input type="text" name="accessKeyId" required>
+                </div>
+                <div class="form-group">
+                    <label>AccessKey Secret:</label>
+                    <input type="password" name="accessKeySecret" required>
+                </div>
+                <button type="submit" class="btn btn-primary">添加密钥</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.key-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    background: #f9fafb;
+}
+
+.key-item.active {
+    background: #fff7ed;
+    border-color: #ff6a00;
+}
+
+.key-item-info {
+    flex: 1;
+}
+
+.key-item-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.key-item-id {
+    font-size: 12px;
+    color: #666;
+    font-family: monospace;
+}
+
+.key-item-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.key-item.active .key-item-name::after {
+    content: ' (当前使用)';
+    color: #ff6a00;
+    font-size: 12px;
+}
+</style>

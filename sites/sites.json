@@ -1,0 +1,31 @@
+{
+  "platform": {
+    "name": "Jinja Hub",
+    "description": "开放式前端开发平台",
+    "version": "1.0.0"
+  },
+  "sites": {
+    "aliyun": {
+      "name": "阿里云管理平台",
+      "description": "多云平台管理系统示例",
+      "icon": "🇨🇳",
+      "path": "/aliyun",
+      "enabled": true,
+      "category": "示例项目",
+      "domains": [],
+      "order": 1
+    },
+    "demo": {
+      "name": "演示站点",
+      "description": "站点切换功能演示",
+      "icon": "🎨",
+      "path": "/demo",
+      "enabled": true,
+      "category": "示例项目",
+      "domains": [],
+      "order": 2
+    }
+  },
+  "home_site": "_home",
+  "domain_mapping": {}
+}

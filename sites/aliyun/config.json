@@ -1,0 +1,60 @@
+{
+  "site": {
+    "title": "阿里云管理平台",
+    "description": "纯前端阿里云资源管理"
+  },
+  "api": {
+    "ecs": {
+      "version": "2014-05-26",
+      "endpoint": "https://ecs.{region}.aliyuncs.com/"
+    },
+    "vpc": {
+      "version": "2016-04-28",
+      "endpoint": "https://vpc.{region}.aliyuncs.com/"
+    }
+  },
+  "regions": [
+    {"id": "cn-hangzhou", "name": "华东1 (杭州)"},
+    {"id": "cn-shanghai", "name": "华东2 (上海)"},
+    {"id": "cn-beijing", "name": "华北2 (北京)"},
+    {"id": "cn-shenzhen", "name": "华南1 (深圳)"},
+    {"id": "cn-guangzhou", "name": "华南2 (广州)"},
+    {"id": "cn-hongkong", "name": "中国香港"}
+  ],
+  "pages": {
+    "login": {
+      "title": "登录",
+      "path": "/login.html",
+      "order": 0
+    },
+    "ecs_instances": {
+      "title": "ECS实例列表",
+      "path": "/ecs_instances.html",
+      "nav": "ECS实例",
+      "order": 1
+    },
+    "vpc_list": {
+      "title": "VPC列表",
+      "path": "/vpc_list.html",
+      "nav": "VPC列表",
+      "order": 2
+    },
+    "vswitch_list": {
+      "title": "交换机列表",
+      "path": "/vswitch_list.html",
+      "nav": "交换机列表",
+      "order": 3
+    },
+    "eip_list": {
+      "title": "EIP列表",
+      "path": "/eip_list.html",
+      "nav": "EIP列表",
+      "order": 4
+    },
+    "test": {
+      "title": "测试页面",
+      "path": "/test.html",
+      "order": 99
+    }
+  }
+}

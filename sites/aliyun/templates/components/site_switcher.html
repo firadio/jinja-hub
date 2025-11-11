@@ -1,0 +1,207 @@
+<!-- 站点切换器组件 -->
+<div class="site-switcher">
+    <button class="site-switcher-btn" id="siteSwitcherBtn">
+        <span class="current-site-icon">{{ site.icon or '🌐' }}</span>
+        <span class="current-site-name">{{ site.name }}</span>
+        <span class="dropdown-arrow">▼</span>
+    </button>
+    <div class="site-switcher-dropdown" id="siteSwitcherDropdown">
+        <div class="dropdown-header">
+            <a href="/" class="platform-link">
+                🏠 {{ platform.name or 'Jinja Hub' }}
+            </a>
+        </div>
+        <div class="dropdown-divider"></div>
+        <div class="dropdown-section">
+            <div class="section-title">可用站点</div>
+            {% for site_id, site_info in all_sites %}
+                {% if site_info.enabled %}
+                <a href="/{{ site_id }}/" class="site-item {% if site_id == site_name %}active{% endif %}">
+                    <span class="site-icon">{{ site_info.icon or '🌐' }}</span>
+                    <div class="site-details">
+                        <div class="site-name">{{ site_info.name }}</div>
+                        {% if site_info.category %}
+                        <div class="site-category">{{ site_info.category }}</div>
+                        {% endif %}
+                    </div>
+                    {% if site_id == site_name %}
+                    <span class="check-mark">✓</span>
+                    {% endif %}
+                </a>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<style>
+.site-switcher {
+    position: relative;
+    display: inline-block;
+}
+
+.site-switcher-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: #f5f7fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    color: #374151;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.site-switcher-btn:hover {
+    background: #e5e7eb;
+    border-color: #d1d5db;
+}
+
+.current-site-icon {
+    font-size: 18px;
+}
+
+.current-site-name {
+    font-weight: 500;
+}
+
+.dropdown-arrow {
+    font-size: 10px;
+    margin-left: 4px;
+    transition: transform 0.2s;
+}
+
+.site-switcher.active .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+.site-switcher-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    min-width: 280px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.2s;
+    z-index: 1000;
+}
+
+.site-switcher.active .site-switcher-dropdown {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.dropdown-header {
+    padding: 12px 16px;
+}
+
+.platform-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #667eea;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.platform-link:hover {
+    color: #5568d3;
+}
+
+.dropdown-divider {
+    height: 1px;
+    background: #e5e7eb;
+    margin: 0;
+}
+
+.dropdown-section {
+    padding: 8px 0;
+}
+
+.section-title {
+    padding: 8px 16px;
+    font-size: 12px;
+    color: #6b7280;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.site-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    color: #374151;
+    text-decoration: none;
+    transition: background 0.15s;
+}
+
+.site-item:hover {
+    background: #f3f4f6;
+}
+
+.site-item.active {
+    background: #ede9fe;
+}
+
+.site-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.site-details {
+    flex: 1;
+}
+
+.site-name {
+    font-weight: 500;
+    font-size: 14px;
+    color: #111827;
+}
+
+.site-category {
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 2px;
+}
+
+.check-mark {
+    color: #667eea;
+    font-weight: bold;
+}
+</style>
+
+<script>
+// 站点切换器交互逻辑
+(function() {
+    const switcher = document.querySelector('.site-switcher');
+    const btn = document.getElementById('siteSwitcherBtn');
+    const dropdown = document.getElementById('siteSwitcherDropdown');
+
+    if (!btn || !dropdown) return;
+
+    // 切换下拉菜单
+    btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        switcher.classList.toggle('active');
+    });
+
+    // 点击其他地方关闭
+    document.addEventListener('click', function() {
+        switcher.classList.remove('active');
+    });
+
+    // 阻止下拉菜单内部点击冒泡
+    dropdown.addEventListener('click', function(e) {
+        e.stopPropagation();
+    });
+})();
+</script>

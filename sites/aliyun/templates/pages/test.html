@@ -3,62 +3,52 @@
 {% block content %}
 {% include "components/navbar.html" %}
 
-<main class="main-content">
-    <div class="page-container">
-        <h1>测试页面 - 站点切换器</h1>
+<main class="min-h-screen bg-base-200 p-4 lg:p-8">
+    <div class="max-w-7xl mx-auto">
+        <!-- 页面标题 -->
+        <h1 class="text-3xl font-bold mb-6">测试页面 - 站点切换器</h1>
 
-        <div class="card" style="background: white; padding: 20px; margin: 20px 0; border-radius: 8px;">
-            <h2>变量检查</h2>
-            <ul>
-                <li><strong>site_name:</strong> {{ site_name }}</li>
-                <li><strong>site.name:</strong> {{ site.name }}</li>
-                <li><strong>site.icon:</strong> {{ site.icon }}</li>
-                <li><strong>platform.name:</strong> {{ platform.name }}</li>
-            </ul>
+        <!-- 变量检查卡片 -->
+        <div class="card bg-base-100 shadow-xl mb-6">
+            <div class="card-body">
+                <h2 class="card-title">变量检查</h2>
+                <ul class="list-disc list-inside space-y-2">
+                    <li><strong>site_name:</strong> {{ site_name }}</li>
+                    <li><strong>site.name:</strong> {{ site.name }}</li>
+                    <li><strong>site.icon:</strong> {{ site.icon }}</li>
+                    <li><strong>platform.name:</strong> {{ platform.name }}</li>
+                </ul>
 
-            <h3>所有站点:</h3>
-            <ul>
-                {% for site_id, site_info in all_sites %}
-                <li>
-                    <strong>{{ site_id }}:</strong>
-                    {{ site_info.icon }} {{ site_info.name }}
-                    ({{ '已启用' if site_info.enabled else '未启用' }})
-                </li>
-                {% endfor %}
-            </ul>
+                <div class="divider"></div>
+
+                <h3 class="text-lg font-semibold mb-2">所有站点:</h3>
+                <ul class="list-disc list-inside space-y-2">
+                    {% for site_id, site_info in all_sites %}
+                    <li>
+                        <strong>{{ site_id }}:</strong>
+                        {{ site_info.icon }} {{ site_info.name }}
+                        <span class="badge badge-sm {% if site_info.enabled %}badge-success{% else %}badge-ghost{% endif %}">
+                            {{ '已启用' if site_info.enabled else '未启用' }}
+                        </span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
         </div>
 
-        <div class="card" style="background: white; padding: 20px; margin: 20px 0; border-radius: 8px;">
-            <h2>使用说明</h2>
-            <p>导航栏左上角应该显示站点切换器。如果看不到，请:</p>
-            <ol>
-                <li>清除浏览器缓存 (Ctrl+Shift+Delete)</li>
-                <li>强制刷新页面 (Ctrl+F5)</li>
-                <li>检查浏览器控制台是否有错误</li>
-                <li>确认 CSS 文件是否加载成功</li>
-            </ol>
+        <!-- 使用说明卡片 -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h2 class="card-title">使用说明</h2>
+                <p class="mb-4">导航栏左上角应该显示站点切换器。如果看不到，请:</p>
+                <ol class="list-decimal list-inside space-y-2 ml-4">
+                    <li>清除浏览器缓存 (Ctrl+Shift+Delete)</li>
+                    <li>强制刷新页面 (Ctrl+F5)</li>
+                    <li>检查浏览器控制台是否有错误</li>
+                    <li>确认 CSS 文件是否加载成功</li>
+                </ol>
+            </div>
         </div>
     </div>
 </main>
-
-<style>
-.card {
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.card h2, .card h3 {
-    margin-top: 20px;
-    margin-bottom: 10px;
-    color: #333;
-}
-
-.card ul {
-    margin-left: 20px;
-}
-
-.card li {
-    margin: 8px 0;
-    line-height: 1.6;
-}
-</style>
 {% endblock %}

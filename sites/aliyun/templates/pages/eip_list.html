@@ -147,8 +147,9 @@
                                 <div class="badge"
                                      :class="{
                                          'badge-success': formatStatus(eip.Status).class === 'inuse',
-                                         'badge-warning': formatStatus(eip.Status).class === 'available',
-                                         'badge-ghost': !['inuse', 'available'].includes(formatStatus(eip.Status).class)
+                                         'badge-info': formatStatus(eip.Status).class === 'available',
+                                         'badge-warning': formatStatus(eip.Status).class === 'associating',
+                                         'badge-ghost': !['inuse', 'available', 'associating'].includes(formatStatus(eip.Status).class)
                                      }"
                                      x-text="formatStatus(eip.Status).text"></div>
                             </td>

@@ -272,10 +272,12 @@ function ecsInstances() {
 
         formatStatus(status) {
             const statusMap = {
-                'Running': { text: '运行中', class: 'status-running' },
-                'Stopped': { text: '已停止', class: 'status-stopped' }
+                'Running': { text: '运行中', class: 'running' },
+                'Stopped': { text: '已停止', class: 'stopped' },
+                'Starting': { text: '启动中', class: 'starting' },
+                'Stopping': { text: '停止中', class: 'stopping' }
             };
-            return statusMap[status] || { text: status, class: '' };
+            return statusMap[status] || { text: status, class: 'unknown' };
         },
 
         formatTime(timeStr) {
@@ -566,11 +568,11 @@ function eipList() {
 
         formatStatus(status) {
             const statusMap = {
-                'Available': { text: '可用', class: 'status-available' },
-                'InUse': { text: '使用中', class: 'status-running' },
-                'Associating': { text: '绑定中', class: 'status-available' }
+                'Available': { text: '可用', class: 'available' },
+                'InUse': { text: '使用中', class: 'inuse' },
+                'Associating': { text: '绑定中', class: 'associating' }
             };
-            return statusMap[status] || { text: status, class: '' };
+            return statusMap[status] || { text: status, class: 'unknown' };
         },
 
         formatTime(timeStr) {

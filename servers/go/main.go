@@ -100,11 +100,9 @@ type Config struct {
 		ECS map[string]string `json:"ecs"`
 		VPC map[string]string `json:"vpc"`
 	} `json:"api"`
-	Regions []struct {
-		ID   string `json:"id"`
-		Name string `json:"name"`
-	} `json:"regions"`
-	Pages map[string]map[string]interface{} `json:"pages"`
+	Pages          map[string]map[string]interface{} `json:"pages"`
+	Tables         map[string]map[string]interface{} `json:"tables"`
+	ResourceManage map[string]map[string]interface{} `json:"resource_manage"`
 }
 
 var sitesConfig SitesConfig

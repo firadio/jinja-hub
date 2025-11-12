@@ -1,13 +1,8 @@
+// EIP 管理组件
 function eipManage() {
     return createResourceManage('eip');
 }
 
-// 云盘管理组件
-function diskManage() {
-    return createResourceManage('disk');
-}
-
-// EIP 申请组件
 function eipAllocate() {
     return {
         ...regionMixin(),
@@ -110,13 +105,14 @@ async function DisableEipDeletionProtection(regionId, allocationId, accessKeyId,
 }
 
 // ECS 实例表格组件（带管理功能）
-function ecsInstancesTable() {
-    const base = createDataTable('ecs_instances');
+
+function eipListTable() {
+    const base = createDataTable('eip_list');
 
     return {
         ...base,
-        // ECS 专用状态
-        currentInstance: null,
+        // EIP 专用状态
+        currentEip: null,
         showManageModal: false,
 
         // 初始化时添加消息监听
@@ -131,27 +127,40 @@ function ecsInstancesTable() {
             });
         },
 
-        // 操作按钮处理
-        handleAction(instance) {
-            this.openManageModal(instance);
+        // 行操作按钮处理
+        handleAction(eip) {
+            this.openManageModal(eip);
+        },
+
+        // 表格级别操作处理
+        handleTableAction(action) {
+            if (action.type === 'navigate') {
+                const basePath = window.APP_CONFIG?.base_path || '';
+                // 如果是申请EIP，带上当前地域参数
+                if (action.name === 'allocate' && this.regionId) {
+                    window.location.href = `${basePath}${action.url}#regionId=${this.regionId}`;
+                } else {
+                    window.location.href = `${basePath}${action.url}`;
+                }
+            }
         },
 
         // 打开管理模态框
-        openManageModal(instance) {
+        openManageModal(eip) {
             const isMobile = window.innerWidth < 1024;
 
             if (isMobile) {
                 const basePath = window.APP_CONFIG?.base_path || '';
-                window.location.href = `${basePath}/ecs_manage.html#instanceId=${instance.InstanceId}&regionId=${this.regionId}`;
+                window.location.href = `${basePath}/eip_manage.html#allocationId=${eip.AllocationId}&regionId=${this.regionId}`;
             } else {
-                this.currentInstance = instance;
+                this.currentEip = eip;
                 this.showManageModal = true;
             }
         },
 
         closeManageModal() {
             this.showManageModal = false;
-            this.currentInstance = null;
+            this.currentEip = null;
             this.loadData(this.currentPage);
         },
 
@@ -169,95 +178,15 @@ function ecsInstancesTable() {
         },
 
         get filterFields() {
-            const tableConfig = window.APP_CONFIG?.tables?.ecs_instances;
+            const tableConfig = window.APP_CONFIG?.tables?.eip_list;
             return tableConfig?.fields?.filter(f => f.showInFilter) || [];
         },
 
         get tableFields() {
-            const tableConfig = window.APP_CONFIG?.tables?.ecs_instances;
+            const tableConfig = window.APP_CONFIG?.tables?.eip_list;
             return tableConfig?.fields?.filter(f => f.showInTable) || [];
         }
     };
 }
 
-// VPC 表格组件
-function vpcListTable() {
-    return createDataTable('vpc_list');
-}
-
-// VSwitch 表格组件
-function vswitchListTable() {
-    return createDataTable('vswitch_list');
-}
-
-// 云盘表格组件（带管理功能）
-function diskListTable() {
-    const base = createDataTable('disk_list');
-
-    return {
-        ...base,
-        // 云盘专用状态
-        currentDisk: null,
-        showManageModal: false,
-
-        // 初始化时添加消息监听
-        init() {
-            base.init.call(this);
-
-            // 监听来自 iframe 的消息
-            window.addEventListener('message', (event) => {
-                if (event.data.type === 'closeModal') {
-                    this.closeManageModal();
-                }
-            });
-        },
-
-        // 操作按钮处理
-        handleAction(disk) {
-            this.openManageModal(disk);
-        },
-
-        // 打开管理模态框
-        openManageModal(disk) {
-            const isMobile = window.innerWidth < 1024;
-
-            if (isMobile) {
-                const basePath = window.APP_CONFIG?.base_path || '';
-                window.location.href = `${basePath}/disk_manage.html#diskId=${disk.DiskId}&regionId=${this.regionId}`;
-            } else {
-                this.currentDisk = disk;
-                this.showManageModal = true;
-            }
-        },
-
-        closeManageModal() {
-            this.showManageModal = false;
-            this.currentDisk = null;
-            this.loadData(this.currentPage);
-        },
-
-        // 重新定义 getter 以修复展开操作符问题
-        get totalPages() {
-            return Math.ceil(this.totalCount / this.pageSize);
-        },
-
-        get startItem() {
-            return (this.currentPage - 1) * this.pageSize + 1;
-        },
-
-        get endItem() {
-            return Math.min(this.currentPage * this.pageSize, this.totalCount);
-        },
-
-        get filterFields() {
-            const tableConfig = window.APP_CONFIG?.tables?.disk_list;
-            return tableConfig?.fields?.filter(f => f.showInFilter) || [];
-        },
-
-        get tableFields() {
-            const tableConfig = window.APP_CONFIG?.tables?.disk_list;
-            return tableConfig?.fields?.filter(f => f.showInTable) || [];
-        }
-    };
-}
-
+// 通用地域加载 Mixin

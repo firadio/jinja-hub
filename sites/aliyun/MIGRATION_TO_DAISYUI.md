@@ -21,14 +21,26 @@
 
 ## 旧代码备份
 
+### CSS 文件备份
 所有旧的自定义 CSS 已备份到:
 ```
 sites/aliyun/static/css_old_backup/
 ```
 
+### 旧组件备份
+所有旧的自定义样式组件已备份到:
+```
+sites/aliyun/templates/components/_old_backup/
+- navbar_old.html (旧导航栏)
+- site_switcher.html (站点切换器 - 180 行自定义 CSS)
+- site_switcher_simple.html (简化站点切换器 - 127 行自定义 CSS)
+- region_selector.html (地域选择器)
+```
+
 如需恢复,可以：
 1. 将 `css_old_backup/` 重命名回 `css/`
 2. 在 base.html 中恢复 CSS 引用
+3. 从 `_old_backup/` 恢复需要的组件
 
 ## 使用的 daisyUI 组件
 

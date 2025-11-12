@@ -213,5 +213,53 @@ async function DescribeRegions(accessKeyId, accessKeySecret) {
     }, accessKeyId, accessKeySecret);
 }
 
+// 启动 ECS 实例
+async function StartInstance(regionId, instanceId, accessKeyId, accessKeySecret) {
+    return await AliyunApi({
+        Action: 'StartInstance',
+        RegionId: regionId,
+        InstanceId: instanceId
+    }, accessKeyId, accessKeySecret);
+}
+
+// 停止 ECS 实例
+async function StopInstance(regionId, instanceId, accessKeyId, accessKeySecret, forceStop = false) {
+    return await AliyunApi({
+        Action: 'StopInstance',
+        RegionId: regionId,
+        InstanceId: instanceId,
+        ForceStop: forceStop.toString()
+    }, accessKeyId, accessKeySecret);
+}
+
+// 重启 ECS 实例
+async function RebootInstance(regionId, instanceId, accessKeyId, accessKeySecret, forceReboot = false) {
+    return await AliyunApi({
+        Action: 'RebootInstance',
+        RegionId: regionId,
+        InstanceId: instanceId,
+        ForceStop: forceReboot.toString()
+    }, accessKeyId, accessKeySecret);
+}
+
+// 修改 ECS 实例名称
+async function ModifyInstanceAttribute(regionId, instanceId, instanceName, accessKeyId, accessKeySecret) {
+    return await AliyunApi({
+        Action: 'ModifyInstanceAttribute',
+        RegionId: regionId,
+        InstanceId: instanceId,
+        InstanceName: instanceName
+    }, accessKeyId, accessKeySecret);
+}
+
+// 获取 ECS 实例 VNC URL
+async function DescribeInstanceVncUrl(regionId, instanceId, accessKeyId, accessKeySecret) {
+    return await AliyunApi({
+        Action: 'DescribeInstanceVncUrl',
+        RegionId: regionId,
+        InstanceId: instanceId
+    }, accessKeyId, accessKeySecret);
+}
+
 // 注意: 地域列表缓存管理已迁移到 store.js 的 RegionManager
 // 使用 window.appStore.regions 访问地域相关功能

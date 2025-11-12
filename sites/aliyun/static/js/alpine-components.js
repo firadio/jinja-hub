@@ -180,6 +180,20 @@ function ecsInstances() {
             eipAddress: '',
             status: ''
         },
+        // 当前操作的实例
+        currentInstance: null,
+        // 模态框状态
+        showDetailModal: false,
+        showRenameModal: false,
+        showVncModal: false,
+        // 重命名表单
+        renameForm: {
+            instanceName: ''
+        },
+        // VNC URL
+        vncUrl: '',
+        // 操作中的实例 ID（用于显示加载状态）
+        operatingInstanceId: null,
 
         get totalPages() {
             return Math.ceil(this.totalCount / this.pageSize);
@@ -292,6 +306,178 @@ function ecsInstances() {
                 hour: '2-digit',
                 minute: '2-digit'
             });
+        },
+
+        // 启动实例
+        async startInstance(instance) {
+            if (!confirm(`确定要启动实例 "${instance.InstanceName || instance.InstanceId}" 吗？`)) {
+                return;
+            }
+
+            this.operatingInstanceId = instance.InstanceId;
+            try {
+                const currentKey = window.appStore.keys.getCurrentKey();
+                const result = await StartInstance(
+                    this.regionId,
+                    instance.InstanceId,
+                    currentKey.accessKeyId,
+                    currentKey.accessKeySecret
+                );
+
+                if (result.Code) {
+                    alert(`启动失败：${result.Message}`);
+                } else {
+                    alert('启动指令已发送，实例正在启动中...');
+                    await this.loadInstances(this.currentPage);
+                }
+            } catch (error) {
+                alert(`启动失败：${error.message}`);
+            } finally {
+                this.operatingInstanceId = null;
+            }
+        },
+
+        // 停止实例
+        async stopInstance(instance) {
+            if (!confirm(`确定要停止实例 "${instance.InstanceName || instance.InstanceId}" 吗？`)) {
+                return;
+            }
+
+            this.operatingInstanceId = instance.InstanceId;
+            try {
+                const currentKey = window.appStore.keys.getCurrentKey();
+                const result = await StopInstance(
+                    this.regionId,
+                    instance.InstanceId,
+                    currentKey.accessKeyId,
+                    currentKey.accessKeySecret
+                );
+
+                if (result.Code) {
+                    alert(`停止失败：${result.Message}`);
+                } else {
+                    alert('停止指令已发送，实例正在停止中...');
+                    await this.loadInstances(this.currentPage);
+                }
+            } catch (error) {
+                alert(`停止失败：${error.message}`);
+            } finally {
+                this.operatingInstanceId = null;
+            }
+        },
+
+        // 重启实例
+        async rebootInstance(instance) {
+            if (!confirm(`确定要重启实例 "${instance.InstanceName || instance.InstanceId}" 吗？`)) {
+                return;
+            }
+
+            this.operatingInstanceId = instance.InstanceId;
+            try {
+                const currentKey = window.appStore.keys.getCurrentKey();
+                const result = await RebootInstance(
+                    this.regionId,
+                    instance.InstanceId,
+                    currentKey.accessKeyId,
+                    currentKey.accessKeySecret
+                );
+
+                if (result.Code) {
+                    alert(`重启失败：${result.Message}`);
+                } else {
+                    alert('重启指令已发送，实例正在重启中...');
+                    await this.loadInstances(this.currentPage);
+                }
+            } catch (error) {
+                alert(`重启失败：${error.message}`);
+            } finally {
+                this.operatingInstanceId = null;
+            }
+        },
+
+        // 查看详情
+        viewDetail(instance) {
+            this.currentInstance = instance;
+            this.showDetailModal = true;
+        },
+
+        closeDetailModal() {
+            this.showDetailModal = false;
+            this.currentInstance = null;
+        },
+
+        // 重命名
+        openRenameModal(instance) {
+            this.currentInstance = instance;
+            this.renameForm.instanceName = instance.InstanceName || '';
+            this.showRenameModal = true;
+        },
+
+        closeRenameModal() {
+            this.showRenameModal = false;
+            this.currentInstance = null;
+            this.renameForm.instanceName = '';
+        },
+
+        async saveRename() {
+            if (!this.renameForm.instanceName.trim()) {
+                alert('请输入实例名称');
+                return;
+            }
+
+            try {
+                const currentKey = window.appStore.keys.getCurrentKey();
+                const result = await ModifyInstanceAttribute(
+                    this.regionId,
+                    this.currentInstance.InstanceId,
+                    this.renameForm.instanceName,
+                    currentKey.accessKeyId,
+                    currentKey.accessKeySecret
+                );
+
+                if (result.Code) {
+                    alert(`修改失败：${result.Message}`);
+                } else {
+                    alert('修改成功');
+                    this.closeRenameModal();
+                    await this.loadInstances(this.currentPage);
+                }
+            } catch (error) {
+                alert(`修改失败：${error.message}`);
+            }
+        },
+
+        // 打开 VNC
+        async openVnc(instance) {
+            this.currentInstance = instance;
+            this.operatingInstanceId = instance.InstanceId;
+
+            try {
+                const currentKey = window.appStore.keys.getCurrentKey();
+                const result = await DescribeInstanceVncUrl(
+                    this.regionId,
+                    instance.InstanceId,
+                    currentKey.accessKeyId,
+                    currentKey.accessKeySecret
+                );
+
+                if (result.Code) {
+                    alert(`获取 VNC 连接失败：${result.Message}`);
+                } else {
+                    this.vncUrl = result.VncUrl;
+                    this.showVncModal = true;
+                }
+            } catch (error) {
+                alert(`获取 VNC 连接失败：${error.message}`);
+            } finally {
+                this.operatingInstanceId = null;
+            }
+        },
+
+        closeVncModal() {
+            this.showVncModal = false;
+            this.vncUrl = '';
+            this.currentInstance = null;
         }
     };
 }

@@ -411,5 +411,5 @@ composer update
 
 ## 技术支持
 
-- 项目地址: https://github.com/firadio/golang-gin-aliyun
+- 项目地址: https://github.com/firadio/jinja-hub
 - 问题反馈: GitHub Issues

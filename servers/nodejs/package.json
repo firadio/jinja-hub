@@ -1,7 +1,7 @@
 {
-  "name": "golang-gin-aliyun",
+  "name": "jinja-hub",
   "version": "1.0.0",
-  "description": "阿里云管理平台 - Node.js 版本 (使用 Nunjucks 模板引擎)",
+  "description": "Jinja Hub - Node.js 版本 (使用 Nunjucks 模板引擎)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

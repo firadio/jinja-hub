@@ -1,6 +1,6 @@
 {
-    "name": "firadio/golang-gin-aliyun",
-    "description": "阿里云管理平台 - PHP 版本 (使用 Twig 模板引擎)",
+    "name": "firadio/jinja-hub",
+    "description": "Jinja Hub - PHP 版本 (使用 Twig 模板引擎)",
     "type": "project",
     "require": {
         "php": ">=7.4",

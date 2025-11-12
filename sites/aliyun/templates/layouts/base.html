@@ -1,11 +1,33 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% if page.title %}{{ page.title }} - {% endif %}{{ config.site.title }}</title>
+
+    <!-- Tailwind CSS + daisyUI -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Tailwind 配置
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'aliyun-orange': '#ff6a00',
+                    }
+                }
+            },
+            daisyui: {
+                themes: ["light", "dark"],
+            }
+        }
+    </script>
+
+    <!-- 自定义样式 (逐步移除) -->
     <link rel="stylesheet" href="{{ base_path }}/static/css/main.css">
     {% block extra_css %}{% endblock %}
+
     <!-- CryptoJS 用于非 HTTPS 环境的降级方案 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
     <!-- Alpine.js -->

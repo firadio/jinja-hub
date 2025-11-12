@@ -1,179 +1,276 @@
 <div x-data="{ ...keyManager(), mobileMenuOpen: false }">
-    <nav class="navbar">
-        <div class="nav-container">
-            <div class="nav-left">
-                {% include 'components/site_switcher_simple.html' %}
+    <!-- daisyUI 导航栏 -->
+    <div class="navbar bg-primary text-primary-content sticky top-0 z-50 shadow-lg">
+        <div class="navbar-start">
+            <!-- 站点切换器 -->
+            <div class="dropdown">
+                <div tabindex="0" role="button" class="btn btn-ghost">
+                    {{ config.site.title }}
+                    <svg class="fill-current w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                        <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
+                    </svg>
+                </div>
+                <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow-lg bg-base-100 text-base-content rounded-box w-64 mt-4">
+                    <li class="menu-title">
+                        <a href="/" class="flex items-center gap-2">
+                            <span>🏠</span>
+                            <span>{% if platform.name %}{{ platform.name }}{% else %}Jinja Hub{% endif %}</span>
+                        </a>
+                    </li>
+                    <div class="divider my-0"></div>
+                    {% for site in all_sites %}
+                    {% if site.info.enabled %}
+                    <li>
+                        <a href="/{{ site.id }}/" class="{% if site.id == site_name %}active{% endif %}">
+                            <span>{% if site.info.icon %}{{ site.info.icon }}{% else %}🌐{% endif %}</span>
+                            <span>{{ site.info.name }}</span>
+                            {% if site.id == site_name %}
+                            <span class="badge badge-primary badge-sm">✓</span>
+                            {% endif %}
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                </ul>
             </div>
+        </div>
 
-            <!-- 移动端菜单按钮 -->
-            <button @click="mobileMenuOpen = !mobileMenuOpen" class="mobile-menu-btn" aria-label="菜单">
-                <span class="hamburger-icon" :class="{ 'open': mobileMenuOpen }">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </span>
-            </button>
-
-            <!-- 导航菜单 -->
-            <ul class="nav-menu" :class="{ 'mobile-open': mobileMenuOpen }">
+        <!-- 桌面端导航菜单 -->
+        <div class="navbar-center hidden lg:flex">
+            <ul class="menu menu-horizontal px-1">
                 {% for item in config.pages_array %}
                 {% if item.value.nav %}
-                <li><a href="{{ base_path }}/{{ item.key }}.html"
-                       class="{% if page.name == item.key %}active{% endif %}"
-                       @click="mobileMenuOpen = false">{{ item.value.nav }}</a></li>
+                <li>
+                    <a href="{{ base_path }}/{{ item.key }}.html"
+                       class="{% if page.name == item.key %}active{% endif %}">
+                        {{ item.value.nav }}
+                    </a>
+                </li>
                 {% endif %}
                 {% endfor %}
             </ul>
-
-            <div class="nav-right" :class="{ 'mobile-open': mobileMenuOpen }">
-                <span x-text="keys[currentKeyId]?.name || '未登录'" class="current-key-name"></span>
-                <button @click="openModal(); mobileMenuOpen = false" class="btn btn-sm btn-outline">密钥管理</button>
-                <button @click="logout(); mobileMenuOpen = false" class="btn btn-sm btn-outline-danger">退出</button>
-            </div>
         </div>
-    </nav>
 
-    <!-- 移动端遮罩层 -->
+        <!-- 右侧操作区 -->
+        <div class="navbar-end gap-2">
+            <!-- 当前密钥显示 -->
+            <div class="badge badge-ghost hidden md:flex gap-1">
+                <span>🔑</span>
+                <span x-text="keys[currentKeyId]?.name || '未登录'"></span>
+            </div>
+
+            <!-- 密钥管理按钮 -->
+            <button @click="openModal()" class="btn btn-ghost btn-sm">
+                密钥管理
+            </button>
+
+            <!-- 退出按钮 -->
+            <button @click="logout()" class="btn btn-error btn-sm">
+                退出
+            </button>
+
+            <!-- 移动端菜单按钮 -->
+            <button @click="mobileMenuOpen = !mobileMenuOpen" class="btn btn-ghost btn-square lg:hidden">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block w-5 h-5 stroke-current">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- 移动端侧边栏菜单 -->
     <div x-show="mobileMenuOpen"
          @click="mobileMenuOpen = false"
-         class="mobile-menu-overlay"
-         x-transition:enter="transition ease-out duration-200"
+         class="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+         x-transition:enter="transition ease-out duration-300"
          x-transition:enter-start="opacity-0"
          x-transition:enter-end="opacity-100"
-         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave="transition ease-in duration-200"
          x-transition:leave-start="opacity-100"
-         x-transition:leave-end="opacity-0"
-         x-cloak></div>
+         x-transition:leave-end="opacity-0">
+    </div>
 
-    <!-- 密钥管理对话框 -->
-    <div x-show="showModal" @click.self="closeModal()" class="modal" x-cloak>
-        <div class="modal-content" style="max-width: 800px;" @click.stop>
-            <span @click="closeModal()" class="close">&times;</span>
-            <h2>密钥管理</h2>
+    <div x-show="mobileMenuOpen"
+         @click.away="mobileMenuOpen = false"
+         class="fixed top-0 right-0 h-full w-80 max-w-[80vw] bg-base-100 shadow-2xl z-50 lg:hidden overflow-y-auto"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="translate-x-full"
+         x-transition:enter-end="translate-x-0"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="translate-x-0"
+         x-transition:leave-end="translate-x-full">
+
+        <!-- 移动端菜单头部 -->
+        <div class="flex items-center justify-between p-4 border-b">
+            <h2 class="text-lg font-bold">导航菜单</h2>
+            <button @click="mobileMenuOpen = false" class="btn btn-ghost btn-sm btn-circle">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- 当前密钥信息 -->
+        <div class="p-4 bg-base-200">
+            <div class="flex items-center gap-2">
+                <span>🔑</span>
+                <span class="font-semibold" x-text="keys[currentKeyId]?.name || '未登录'"></span>
+            </div>
+        </div>
+
+        <!-- 导航链接 -->
+        <ul class="menu p-4">
+            {% for item in config.pages_array %}
+            {% if item.value.nav %}
+            <li>
+                <a href="{{ base_path }}/{{ item.key }}.html"
+                   class="{% if page.name == item.key %}active{% endif %}"
+                   @click="mobileMenuOpen = false">
+                    {{ item.value.nav }}
+                </a>
+            </li>
+            {% endif %}
+            {% endfor %}
+        </ul>
+
+        <!-- 底部操作按钮 -->
+        <div class="p-4 border-t mt-auto space-y-2">
+            <button @click="openModal(); mobileMenuOpen = false" class="btn btn-outline btn-block">
+                密钥管理
+            </button>
+            <button @click="logout(); mobileMenuOpen = false" class="btn btn-error btn-block">
+                退出
+            </button>
+        </div>
+    </div>
+
+    <!-- 密钥管理模态框 -->
+    <dialog x-show="showModal"
+            @click.self="closeModal()"
+            class="modal"
+            :class="{ 'modal-open': showModal }"
+            x-cloak>
+        <div class="modal-box w-11/12 max-w-3xl" @click.stop>
+            <form method="dialog">
+                <button @click="closeModal()" class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+            </form>
+            <h3 class="font-bold text-lg mb-4">密钥管理</h3>
 
             <!-- 密钥列表 -->
-            <div style="margin-bottom: 20px;">
+            <div class="space-y-2 mb-6">
                 <template x-if="keys.length === 0">
-                    <div style="text-align: center; padding: 40px; color: #999;">
-                        <div style="font-size: 48px; margin-bottom: 10px;">🔑</div>
-                        <p>暂无密钥，请添加一个新密钥</p>
+                    <div class="text-center py-12">
+                        <div class="text-6xl mb-4">🔑</div>
+                        <p class="text-base-content/60">暂无密钥，请添加一个新密钥</p>
                     </div>
                 </template>
 
-                <template x-if="keys.length > 0">
-                    <div>
-                        <template x-for="(key, index) in keys" :key="index">
-                            <div class="key-item" :class="{ 'active': index === currentKeyId }">
-                                <div class="key-item-info">
-                                    <div class="key-item-name" x-text="key.name"></div>
-                                    <div class="key-item-id" x-text="key.accessKeyId"></div>
+                <template x-for="(key, index) in keys" :key="index">
+                    <div class="card bg-base-200" :class="{ 'ring-2 ring-primary': index === currentKeyId }">
+                        <div class="card-body p-4">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
+                                    <h4 class="card-title text-base" x-text="key.name"></h4>
+                                    <p class="text-sm text-base-content/60 font-mono" x-text="key.accessKeyId"></p>
+                                    <template x-if="index === currentKeyId">
+                                        <div class="badge badge-primary badge-sm mt-1">当前使用</div>
+                                    </template>
                                 </div>
-                                <div class="key-item-actions">
-                                    <button x-show="index !== currentKeyId" @click="switchKey(index)" class="btn btn-sm btn-primary">切换</button>
-                                    <button @click="openEditModal(index)" class="btn btn-sm" style="background-color: #17a2b8; color: white;">编辑</button>
-                                    <button @click="deleteKey(index)" class="btn btn-sm btn-danger">删除</button>
+                                <div class="flex gap-2">
+                                    <button x-show="index !== currentKeyId"
+                                            @click="switchKey(index)"
+                                            class="btn btn-primary btn-sm">切换</button>
+                                    <button @click="openEditModal(index)"
+                                            class="btn btn-info btn-sm">编辑</button>
+                                    <button @click="deleteKey(index)"
+                                            class="btn btn-error btn-sm">删除</button>
                                 </div>
                             </div>
-                        </template>
+                        </div>
                     </div>
                 </template>
             </div>
 
             <!-- 添加新密钥表单 -->
-            <div style="border-top: 2px solid #f0f0f0; padding-top: 20px;">
-                <h3 style="margin-bottom: 15px;">添加新密钥</h3>
-                <form @submit.prevent="addKey()">
-                    <div class="form-group">
-                        <label>名称:</label>
-                        <input type="text" x-model="addForm.name" placeholder="例如: 生产环境" required>
-                    </div>
-                    <div class="form-group">
-                        <label>AccessKey ID:</label>
-                        <input type="text" x-model="addForm.accessKeyId" required>
-                    </div>
-                    <div class="form-group">
-                        <label>AccessKey Secret:</label>
-                        <input type="password" x-model="addForm.accessKeySecret" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary">添加密钥</button>
-                </form>
-            </div>
+            <div class="divider">添加新密钥</div>
+            <form @submit.prevent="addKey()" class="space-y-4">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">名称</span>
+                    </label>
+                    <input type="text"
+                           x-model="addForm.name"
+                           placeholder="例如: 生产环境"
+                           class="input input-bordered"
+                           required>
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">AccessKey ID</span>
+                    </label>
+                    <input type="text"
+                           x-model="addForm.accessKeyId"
+                           class="input input-bordered"
+                           required>
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">AccessKey Secret</span>
+                    </label>
+                    <input type="password"
+                           x-model="addForm.accessKeySecret"
+                           class="input input-bordered"
+                           required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">添加密钥</button>
+            </form>
         </div>
-    </div>
+    </dialog>
 
-    <!-- 编辑密钥对话框 -->
-    <div x-show="showEditModal" @click.self="closeEditModal()" class="modal" x-cloak>
-        <div class="modal-content" style="max-width: 500px;" @click.stop>
-            <span @click="closeEditModal()" class="close">&times;</span>
-            <h2>编辑密钥</h2>
-            <form @submit.prevent="saveEdit()">
-                <div class="form-group">
-                    <label>名称:</label>
-                    <input type="text" x-model="editForm.name" required>
+    <!-- 编辑密钥模态框 -->
+    <dialog x-show="showEditModal"
+            @click.self="closeEditModal()"
+            class="modal"
+            :class="{ 'modal-open': showEditModal }"
+            x-cloak>
+        <div class="modal-box" @click.stop>
+            <form method="dialog">
+                <button @click="closeEditModal()" class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+            </form>
+            <h3 class="font-bold text-lg mb-4">编辑密钥</h3>
+            <form @submit.prevent="saveEdit()" class="space-y-4">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">名称</span>
+                    </label>
+                    <input type="text"
+                           x-model="editForm.name"
+                           class="input input-bordered"
+                           required>
                 </div>
-                <div class="form-group">
-                    <label>AccessKey ID:</label>
-                    <input type="text" x-model="editForm.accessKeyId" required>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">AccessKey ID</span>
+                    </label>
+                    <input type="text"
+                           x-model="editForm.accessKeyId"
+                           class="input input-bordered"
+                           required>
                 </div>
-                <div class="form-group">
-                    <label>AccessKey Secret:</label>
-                    <input type="password" x-model="editForm.accessKeySecret" required>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">AccessKey Secret</span>
+                    </label>
+                    <input type="password"
+                           x-model="editForm.accessKeySecret"
+                           class="input input-bordered"
+                           required>
                 </div>
-                <div style="display: flex; gap: 10px;">
-                    <button type="submit" class="btn btn-primary">保存</button>
-                    <button type="button" @click="closeEditModal()" class="btn" style="background-color: #6c757d; color: white;">取消</button>
+                <div class="flex gap-2">
+                    <button type="submit" class="btn btn-primary flex-1">保存</button>
+                    <button type="button" @click="closeEditModal()" class="btn flex-1">取消</button>
                 </div>
             </form>
         </div>
-    </div>
+    </dialog>
 </div>
-
-<style>
-.key-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 15px;
-    border: 1px solid #e5e7eb;
-    border-radius: 6px;
-    margin-bottom: 10px;
-    background: #f9fafb;
-}
-
-.key-item.active {
-    background: #fff7ed;
-    border-color: #ff6a00;
-}
-
-.key-item-info {
-    flex: 1;
-}
-
-.key-item-name {
-    font-weight: 600;
-    font-size: 14px;
-    color: #333;
-    margin-bottom: 4px;
-}
-
-.key-item-id {
-    font-size: 12px;
-    color: #666;
-    font-family: monospace;
-}
-
-.key-item-actions {
-    display: flex;
-    gap: 8px;
-}
-
-.key-item.active .key-item-name::after {
-    content: ' (当前使用)';
-    color: #ff6a00;
-    font-size: 12px;
-}
-
-[x-cloak] {
-    display: none !important;
-}
-</style>

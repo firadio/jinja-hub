@@ -13,10 +13,11 @@
 </head>
 <body>
     {% block content %}{% endblock %}
-    <!-- 依赖顺序: aliyun-api.js -> store.js -> alpine-components.js -->
+    <!-- 依赖顺序: aliyun-api.js -> store.js -> alpine-components.js -> dev-tools.js -->
     <script src="{{ base_path }}/static/js/aliyun-api.js"></script>
     <script src="{{ base_path }}/static/js/store.js"></script>
     <script src="{{ base_path }}/static/js/alpine-components.js"></script>
+    <script src="{{ base_path }}/static/js/dev-tools.js"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

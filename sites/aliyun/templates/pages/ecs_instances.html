@@ -355,19 +355,6 @@
                 </div>
             </div>
         </div>
-
-        <!-- VNC 模态框 -->
-        <div class="modal" :class="{'modal-open': showVncModal}" x-cloak>
-            <div class="modal-box max-w-6xl">
-                <h3 class="font-bold text-lg mb-4">VNC 远程连接</h3>
-                <template x-if="vncUrl">
-                    <iframe :src="vncUrl" class="w-full h-[600px] border-0"></iframe>
-                </template>
-                <div class="modal-action">
-                    <button @click="closeVncModal()" class="btn">关闭</button>
-                </div>
-            </div>
-        </div>
     </div>
 </main>
 {% endblock %}

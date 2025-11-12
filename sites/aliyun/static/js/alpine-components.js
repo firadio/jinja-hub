@@ -184,14 +184,11 @@ function ecsInstances() {
         currentInstance: null,
         // 模态框状态
         showManageModal: false,
-        showVncModal: false,
         showRenameForm: false,
         // 重命名表单
         renameForm: {
             instanceName: ''
         },
-        // VNC URL
-        vncUrl: '',
         // 操作中的实例 ID（用于显示加载状态）
         operatingInstanceId: null,
 
@@ -441,7 +438,6 @@ function ecsInstances() {
 
         // 打开 VNC
         async openVnc(instance) {
-            this.currentInstance = instance;
             this.operatingInstanceId = instance.InstanceId;
 
             try {
@@ -456,20 +452,23 @@ function ecsInstances() {
                 if (result.Code) {
                     alert(`获取 VNC 连接失败：${result.Message}`);
                 } else {
-                    this.vncUrl = result.VncUrl;
-                    this.showVncModal = true;
+                    // 判断是否为 Windows 系统
+                    const isWindows = instance.OSType === 'windows' ||
+                                     (instance.OSName && instance.OSName.toLowerCase().includes('windows'));
+
+                    // 构建阿里云 VNC 控制台 URL
+                    const vncUrl = encodeURIComponent(result.VncUrl);
+                    const instanceId = instance.InstanceId;
+                    const consoleUrl = `https://g.alicdn.com/aliyun/ecs-console-vnc2/0.0.8/index.html?vncUrl=${vncUrl}&instanceId=${instanceId}&isWindows=${isWindows}`;
+
+                    // 在新窗口打开
+                    window.open(consoleUrl, '_blank', 'width=1024,height=768');
                 }
             } catch (error) {
                 alert(`获取 VNC 连接失败：${error.message}`);
             } finally {
                 this.operatingInstanceId = null;
             }
-        },
-
-        closeVncModal() {
-            this.showVncModal = false;
-            this.vncUrl = '';
-            this.currentInstance = null;
         }
     };
 }

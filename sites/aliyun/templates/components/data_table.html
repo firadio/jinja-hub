@@ -1,0 +1,200 @@
+<!-- 通用数据表格组件 -->
+<div class="max-w-7xl mx-auto">
+        <!-- 页面标题 -->
+        <h1 class="text-3xl font-bold mb-6" x-text="config.title"></h1>
+
+        <!-- 搜索过滤区 -->
+        <div class="card bg-base-100 shadow-xl mb-6" x-show="filterFields && filterFields.length > 0">
+            <div class="card-body">
+                <h2 class="card-title text-lg mb-4">筛选条件</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- 地域选择 -->
+                    <div class="form-control w-full" x-show="config.showRegionSelector">
+                        <label class="label">
+                            <span class="label-text">地域</span>
+                        </label>
+                        <select class="select select-bordered w-full"
+                                x-model="regionId"
+                                @change="changeRegion()"
+                                :disabled="regionsLoading">
+                            <template x-if="regionsLoading">
+                                <option>加载中...</option>
+                            </template>
+                            <template x-if="!regionsLoading">
+                                <template x-for="region in regions" :key="region.id">
+                                    <option :value="region.id" x-text="region.name" :selected="regionId === region.id"></option>
+                                </template>
+                            </template>
+                        </select>
+                    </div>
+
+                    <!-- 动态筛选字段 -->
+                    <template x-for="field in filterFields" :key="field.filterField">
+                        <div class="form-control w-full">
+                            <label class="label">
+                                <span class="label-text" x-text="field.label"></span>
+                            </label>
+                            <!-- 输入框类型 -->
+                            <template x-if="field.filterType === 'input'">
+                                <input type="text"
+                                       class="input input-bordered w-full"
+                                       x-model="filters[field.filterField]"
+                                       :placeholder="field.placeholder"
+                                       @keyup.enter="search()">
+                            </template>
+                            <!-- 下拉选择类型 -->
+                            <template x-if="field.filterType === 'select'">
+                                <select class="select select-bordered w-full"
+                                        x-model="filters[field.filterField]"
+                                        @change="search()">
+                                    <option :value="''">全部<span x-text="field.label"></span></option>
+                                    <template x-for="option in field.filterOptions" :key="option.value">
+                                        <option :value="option.value" x-text="option.label"></option>
+                                    </template>
+                                </select>
+                            </template>
+                        </div>
+                    </template>
+
+                    <!-- 搜索按钮 -->
+                    <div class="form-control w-full" x-show="filterFields && filterFields.length > 0">
+                        <label class="label">
+                            <span class="label-text">&nbsp;</span>
+                        </label>
+                        <button @click="search()" class="btn btn-primary w-full">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            搜索
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 错误提示 -->
+        <div x-show="error" x-cloak class="alert alert-error shadow-lg mb-6">
+            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span x-text="error"></span>
+        </div>
+
+        <!-- 数据表格 -->
+        <div class="card bg-base-100 shadow-xl overflow-x-auto">
+            <table class="table table-zebra" :class="{'whitespace-nowrap': config.noWrap}">
+                <thead>
+                    <tr>
+                        <template x-for="field in tableFields" :key="field.field">
+                            <th x-text="field.label"></th>
+                        </template>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- 加载中状态 -->
+                    <template x-if="loading && dataItems.length === 0">
+                        <tr>
+                            <td :colspan="tableFields.length" class="text-center py-12">
+                                <span class="loading loading-spinner loading-lg text-primary"></span>
+                                <p class="mt-2 text-base-content/60">加载中...</p>
+                            </td>
+                        </tr>
+                    </template>
+
+                    <!-- 无数据状态 -->
+                    <template x-if="!loading && dataItems.length === 0">
+                        <tr>
+                            <td :colspan="tableFields.length" class="text-center py-12">
+                                <div class="text-base-content/60">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                                    </svg>
+                                    <p>暂无数据</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+
+                    <!-- 数据行 -->
+                    <template x-for="item in dataItems" :key="item[config.rowKey]">
+                        <tr class="hover" :class="{ 'opacity-50': loading }">
+                            <template x-for="field in tableFields" :key="field.field">
+                                <td>
+                                    <!-- 操作列 -->
+                                    <template x-if="field.columnType === 'actions'">
+                                        <button @click="handleAction && handleAction(item)" class="btn btn-xs btn-primary">
+                                            管理
+                                        </button>
+                                    </template>
+                                    <!-- Badge 类型 -->
+                                    <template x-if="field.columnType === 'badge'">
+                                        <span x-html="getColumnValue(item, field)"></span>
+                                    </template>
+                                    <!-- 自定义渲染 -->
+                                    <template x-if="field.render && field.columnType !== 'actions' && field.columnType !== 'badge'">
+                                        <span x-html="field.render(item, field)"></span>
+                                    </template>
+                                    <!-- 默认渲染 -->
+                                    <template x-if="!field.render && field.columnType !== 'actions' && field.columnType !== 'badge'">
+                                        <span x-text="getColumnValue(item, field)" :class="field.class"></span>
+                                    </template>
+                                </td>
+                            </template>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 分页 -->
+        <div x-show="totalCount > 0" x-cloak class="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="join">
+                <!-- 首页 -->
+                <button @click="loadData(1)" :disabled="loading || currentPage === 1" class="join-item btn btn-sm" title="首页">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                    </svg>
+                </button>
+                <!-- 上一页 -->
+                <button @click="prevPage()" :disabled="loading || currentPage === 1" class="join-item btn btn-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                    上一页
+                </button>
+                <!-- 页码显示 -->
+                <button class="join-item btn btn-sm" disabled>
+                    第 <span x-text="currentPage"></span> / <span x-text="totalPages"></span> 页
+                </button>
+                <!-- 下一页 -->
+                <button @click="nextPage()" :disabled="loading || currentPage === totalPages" class="join-item btn btn-sm">
+                    下一页
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+                <!-- 末页 -->
+                <button @click="loadData(totalPages)" :disabled="loading || currentPage === totalPages" class="join-item btn btn-sm" title="末页">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="text-sm text-base-content/60" x-show="config.showItemCount">
+                <span>共 <span x-text="totalCount" class="font-semibold text-primary"></span> 条</span>
+                <span x-show="totalPages > 1">，显示第 <span x-text="startItem" class="font-semibold"></span>-<span x-text="endItem" class="font-semibold"></span> 条</span>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <span class="text-sm text-base-content/60">每页</span>
+                <select class="select select-bordered select-sm w-24" x-model="pageSize" @change="changePageSize()" :disabled="loading">
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+                <span class="text-sm text-base-content/60">条</span>
+            </div>
+        </div>
+    </div>

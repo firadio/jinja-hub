@@ -1,5 +1,374 @@
 // Alpine.js 组件定义
 
+// 通用表格组件工厂函数
+function createDataTable(tableKey) {
+    const tableConfig = window.APP_CONFIG?.tables?.[tableKey];
+    if (!tableConfig) {
+        console.error(`Table config not found: ${tableKey}`);
+        return {};
+    }
+
+    return {
+        ...regionMixin(),
+        config: tableConfig,
+        dataItems: [],
+        loading: false,
+        error: '',
+        currentPage: 1,
+        pageSize: 10,
+        totalCount: 0,
+        regionId: '',
+        filters: {},
+
+        // 计算属性：筛选字段
+        get filterFields() {
+            return tableConfig.fields?.filter(f => f.showInFilter) || [];
+        },
+
+        // 计算属性：表格字段
+        get tableFields() {
+            return tableConfig.fields?.filter(f => f.showInTable) || [];
+        },
+
+        // 初始化筛选字段
+        initFilters() {
+            if (tableConfig.fields) {
+                tableConfig.fields.forEach(field => {
+                    if (field.showInFilter && field.filterField) {
+                        this.filters[field.filterField] = '';
+                    }
+                });
+            }
+        },
+
+        get totalPages() {
+            return Math.ceil(this.totalCount / this.pageSize);
+        },
+
+        get startItem() {
+            return (this.currentPage - 1) * this.pageSize + 1;
+        },
+
+        get endItem() {
+            return Math.min(this.currentPage * this.pageSize, this.totalCount);
+        },
+
+        async init() {
+            this.initFilters();
+
+            // 从 URL hash 参数读取状态
+            const hash = window.location.hash.substring(1);
+            const urlParams = new URLSearchParams(hash);
+
+            // 读取地域
+            this.regionId = urlParams.get('regionId') || window.appStore.keys.getDefaultRegion() || 'cn-hangzhou';
+
+            // 读取分页参数
+            const page = urlParams.get('page');
+            if (page) this.currentPage = parseInt(page);
+
+            const pageSize = urlParams.get('pageSize');
+            if (pageSize) this.pageSize = parseInt(pageSize);
+
+            // 读取搜索条件
+            if (tableConfig.fields) {
+                tableConfig.fields.forEach(field => {
+                    if (field.showInFilter && field.filterField) {
+                        const value = urlParams.get(field.filterField);
+                        if (value) this.filters[field.filterField] = value;
+                    }
+                });
+            }
+
+            await this.loadRegions();
+            await this.loadData(this.currentPage);
+        },
+
+        // 更新 URL hash 参数
+        updateUrl() {
+            const params = new URLSearchParams();
+            params.set('regionId', this.regionId);
+
+            if (this.currentPage > 1) {
+                params.set('page', this.currentPage.toString());
+            }
+            if (this.pageSize !== 10) {
+                params.set('pageSize', this.pageSize.toString());
+            }
+
+            // 添加搜索条件
+            if (tableConfig.fields) {
+                tableConfig.fields.forEach(field => {
+                    if (field.showInFilter && field.filterField && this.filters[field.filterField]) {
+                        params.set(field.filterField, this.filters[field.filterField]);
+                    }
+                });
+            }
+
+            const basePath = window.APP_CONFIG?.base_path || '';
+            const currentPath = window.location.pathname.split('/').pop();
+            const newUrl = `${basePath}/${currentPath}#${params.toString()}`;
+            window.history.pushState({}, '', newUrl);
+        },
+
+        async loadData(page = 1) {
+            this.loading = true;
+            this.error = '';
+            this.currentPage = page;
+
+            this.updateUrl();
+
+            try {
+                const currentKey = window.appStore.keys.getCurrentKey();
+
+                if (!currentKey) {
+                    this.error = '请先登录';
+                    return;
+                }
+
+                // 构建搜索过滤参数
+                const searchFilters = {};
+                if (tableConfig.fields) {
+                    tableConfig.fields.forEach(field => {
+                        if (field.showInFilter && field.filterField && this.filters[field.filterField]) {
+                            searchFilters[field.filterField] = this.filters[field.filterField];
+                        }
+                    });
+                }
+
+                // 调用 API 函数
+                const apiFunction = window[tableConfig.apiFunction];
+                if (!apiFunction) {
+                    this.error = `API function not found: ${tableConfig.apiFunction}`;
+                    return;
+                }
+
+                const data = await apiFunction(
+                    this.regionId,
+                    currentKey.accessKeyId,
+                    currentKey.accessKeySecret,
+                    this.currentPage,
+                    this.pageSize,
+                    searchFilters
+                );
+
+                if (data.Code) {
+                    this.error = data.Message || '加载失败';
+                    return;
+                }
+
+                // 根据配置的数据路径提取数据
+                const dataPath = tableConfig.dataPath.split('.');
+                let items = data;
+                for (const key of dataPath) {
+                    items = items?.[key];
+                }
+
+                this.dataItems = items || [];
+                this.totalCount = data.TotalCount || 0;
+
+                console.log('Data loaded:', {
+                    items: this.dataItems.length,
+                    totalCount: this.totalCount,
+                    pageSize: this.pageSize,
+                    totalPages: this.totalPages,
+                    currentPage: this.currentPage,
+                    calculation: `Math.ceil(${this.totalCount} / ${this.pageSize}) = ${Math.ceil(this.totalCount / this.pageSize)}`
+                });
+            } catch (error) {
+                this.error = error.message || '加载失败';
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async search() {
+            await this.loadData(1);
+        },
+
+        async changeRegion() {
+            window.appStore.keys.setDefaultRegion(this.regionId);
+            await this.loadData(1);
+        },
+
+        async changePageSize() {
+            await this.loadData(1);
+        },
+
+        async prevPage() {
+            if (this.currentPage > 1) {
+                await this.loadData(this.currentPage - 1);
+            }
+        },
+
+        async nextPage() {
+            if (this.currentPage < this.totalPages) {
+                await this.loadData(this.currentPage + 1);
+            }
+        },
+
+        // 获取列值
+        getColumnValue(item, field) {
+            const fieldPath = field.field.replace(/\[(\d+)\]/g, '.$1').split('.');
+            let value = item;
+
+            for (const key of fieldPath) {
+                value = value?.[key];
+                if (value === undefined || value === null) break;
+            }
+
+            // 处理特殊类型
+            if (value === undefined || value === null || value === '') {
+                return field.defaultValue || '-';
+            }
+
+            // 处理时间类型
+            if (field.columnType === 'datetime') {
+                return this.formatTime(value);
+            }
+
+            // 处理后缀
+            if (field.suffix) {
+                return `${value}${field.suffix}`;
+            }
+
+            // 处理 badge 类型
+            if (field.columnType === 'badge') {
+                const statusInfo = this.formatStatus(value);
+                return `<div class="badge ${this.getBadgeClass(statusInfo.class)}">${statusInfo.text}</div>`;
+            }
+
+            return value;
+        },
+
+        getBadgeClass(statusClass) {
+            const classMap = {
+                'running': 'badge-success',
+                'stopped': 'badge-error',
+                'starting': 'badge-warning',
+                'stopping': 'badge-warning',
+                'available': 'badge-info',
+                'inuse': 'badge-success',
+                'associating': 'badge-warning',
+                'pending': 'badge-warning'
+            };
+            return classMap[statusClass] || 'badge-ghost';
+        },
+
+        formatStatus(status) {
+            const statusMap = {
+                // ECS 状态
+                'Running': { text: '运行中', class: 'running' },
+                'Stopped': { text: '已停止', class: 'stopped' },
+                'Starting': { text: '启动中', class: 'starting' },
+                'Stopping': { text: '停止中', class: 'stopping' },
+                // EIP 状态
+                'Available': { text: '可用', class: 'available' },
+                'InUse': { text: '使用中', class: 'inuse' },
+                'Associating': { text: '绑定中', class: 'associating' },
+                // VPC/VSwitch 状态
+                'Pending': { text: '创建中', class: 'pending' }
+            };
+            return statusMap[status] || { text: status, class: 'unknown' };
+        },
+
+        formatTime(timeStr) {
+            if (!timeStr) return '-';
+            const date = new Date(timeStr);
+            return date.toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+    };
+}
+
+// 通用表格组件包装函数（用于向后兼容）
+function dataTable() {
+    // 从当前页面路径推断表格配置 key
+    const pathname = window.location.pathname;
+    const pageMatch = pathname.match(/\/([^/]+)\.html$/);
+    const tableKey = pageMatch ? pageMatch[1] : 'ecs_instances';
+    return createDataTable(tableKey);
+}
+
+// ECS 实例表格组件（带管理功能）
+function ecsInstancesTable() {
+    const base = createDataTable('ecs_instances');
+
+    return {
+        ...base,
+        // ECS 专用状态
+        currentInstance: null,
+        showManageModal: false,
+
+        // 操作按钮处理
+        handleAction(instance) {
+            this.openManageModal(instance);
+        },
+
+        // 打开管理模态框
+        openManageModal(instance) {
+            const isMobile = window.innerWidth < 1024;
+
+            if (isMobile) {
+                const basePath = window.APP_CONFIG?.base_path || '';
+                window.location.href = `${basePath}/ecs_manage.html#instanceId=${instance.InstanceId}&regionId=${this.regionId}`;
+            } else {
+                this.currentInstance = instance;
+                this.showManageModal = true;
+            }
+        },
+
+        closeManageModal() {
+            this.showManageModal = false;
+            this.currentInstance = null;
+            this.loadData(this.currentPage);
+        },
+
+        // 重新定义 getter 以修复展开操作符问题
+        get totalPages() {
+            return Math.ceil(this.totalCount / this.pageSize);
+        },
+
+        get startItem() {
+            return (this.currentPage - 1) * this.pageSize + 1;
+        },
+
+        get endItem() {
+            return Math.min(this.currentPage * this.pageSize, this.totalCount);
+        },
+
+        get filterFields() {
+            const tableConfig = window.APP_CONFIG?.tables?.ecs_instances;
+            return tableConfig?.fields?.filter(f => f.showInFilter) || [];
+        },
+
+        get tableFields() {
+            const tableConfig = window.APP_CONFIG?.tables?.ecs_instances;
+            return tableConfig?.fields?.filter(f => f.showInTable) || [];
+        }
+    };
+}
+
+// VPC 表格组件
+function vpcListTable() {
+    return createDataTable('vpc_list');
+}
+
+// VSwitch 表格组件
+function vswitchListTable() {
+    return createDataTable('vswitch_list');
+}
+
+// EIP 表格组件
+function eipListTable() {
+    return createDataTable('eip_list');
+}
+
 // 通用地域加载 Mixin
 function regionMixin() {
     return {
@@ -184,13 +553,6 @@ function ecsInstances() {
         currentInstance: null,
         // 模态框状态
         showManageModal: false,
-        showRenameForm: false,
-        // 重命名表单
-        renameForm: {
-            instanceName: ''
-        },
-        // 操作中的实例 ID（用于显示加载状态）
-        operatingInstanceId: null,
 
         get totalPages() {
             return Math.ceil(this.totalCount / this.pageSize);
@@ -205,16 +567,66 @@ function ecsInstances() {
         },
 
         async init() {
-            // 使用 window.appStore.keys
-            this.regionId = window.appStore.keys.getDefaultRegion() || 'cn-hangzhou';
+            // 从 URL hash 参数读取状态
+            const hash = window.location.hash.substring(1); // 去掉 #
+            const urlParams = new URLSearchParams(hash);
+
+            // 读取地域
+            this.regionId = urlParams.get('regionId') || window.appStore.keys.getDefaultRegion() || 'cn-hangzhou';
+
+            // 读取分页参数
+            const page = urlParams.get('page');
+            if (page) this.currentPage = parseInt(page);
+
+            const pageSize = urlParams.get('pageSize');
+            if (pageSize) this.pageSize = parseInt(pageSize);
+
+            // 读取搜索条件
+            this.filters.instanceName = urlParams.get('instanceName') || '';
+            this.filters.privateIp = urlParams.get('privateIp') || '';
+            this.filters.publicIp = urlParams.get('publicIp') || '';
+            this.filters.eipAddress = urlParams.get('eipAddress') || '';
+            this.filters.status = urlParams.get('status') || '';
+
             await this.loadRegions();
-            await this.loadInstances();
+            await this.loadInstances(this.currentPage);
+        },
+
+        // 更新 URL hash 参数
+        updateUrl() {
+            const params = new URLSearchParams();
+
+            // 添加地域
+            params.set('regionId', this.regionId);
+
+            // 添加分页参数
+            if (this.currentPage > 1) {
+                params.set('page', this.currentPage.toString());
+            }
+            if (this.pageSize !== 10) {
+                params.set('pageSize', this.pageSize.toString());
+            }
+
+            // 添加搜索条件
+            if (this.filters.instanceName) params.set('instanceName', this.filters.instanceName);
+            if (this.filters.privateIp) params.set('privateIp', this.filters.privateIp);
+            if (this.filters.publicIp) params.set('publicIp', this.filters.publicIp);
+            if (this.filters.eipAddress) params.set('eipAddress', this.filters.eipAddress);
+            if (this.filters.status) params.set('status', this.filters.status);
+
+            // 更新浏览器 URL hash（不刷新页面）
+            const basePath = window.APP_CONFIG?.base_path || '';
+            const newUrl = `${basePath}/ecs_instances.html#${params.toString()}`;
+            window.history.pushState({}, '', newUrl);
         },
 
         async loadInstances(page = 1) {
             this.loading = true;
             this.error = '';
             this.currentPage = page;
+
+            // 更新 URL
+            this.updateUrl();
 
             try {
                 // 使用 window.appStore.keys
@@ -243,15 +655,16 @@ function ecsInstances() {
 
                 if (data.Code) {
                     this.error = data.Message || '加载失败';
-                    this.instances = [];
+                    // 不清空原有数据，保持上次加载的数据
                     return;
                 }
 
+                // 成功获取数据后才更新
                 this.instances = data.Instances?.Instance || [];
                 this.totalCount = data.TotalCount || 0;
             } catch (error) {
                 this.error = error.message || '加载失败';
-                this.instances = [];
+                // 不清空原有数据，保持上次加载的数据
             } finally {
                 this.loading = false;
             }
@@ -394,81 +807,25 @@ function ecsInstances() {
 
         // 打开管理模态框
         openManageModal(instance) {
-            this.currentInstance = instance;
-            this.renameForm.instanceName = instance.InstanceName || '';
-            this.showRenameForm = false;
-            this.showManageModal = true;
+            // 检测是否为移动设备
+            const isMobile = window.innerWidth < 1024; // lg 断点
+
+            if (isMobile) {
+                // 移动端：通过 hash 参数跳转到管理页面
+                const basePath = window.APP_CONFIG?.base_path || '';
+                window.location.href = `${basePath}/ecs_manage.html#instanceId=${instance.InstanceId}&regionId=${this.regionId}`;
+            } else {
+                // 桌面端：打开模态框
+                this.currentInstance = instance;
+                this.showManageModal = true;
+            }
         },
 
         closeManageModal() {
             this.showManageModal = false;
-            this.showRenameForm = false;
             this.currentInstance = null;
-            this.renameForm.instanceName = '';
-        },
-
-        async saveRename() {
-            if (!this.renameForm.instanceName.trim()) {
-                alert('请输入实例名称');
-                return;
-            }
-
-            try {
-                const currentKey = window.appStore.keys.getCurrentKey();
-                const result = await ModifyInstanceAttribute(
-                    this.regionId,
-                    this.currentInstance.InstanceId,
-                    this.renameForm.instanceName,
-                    currentKey.accessKeyId,
-                    currentKey.accessKeySecret
-                );
-
-                if (result.Code) {
-                    alert(`修改失败：${result.Message}`);
-                } else {
-                    alert('修改成功');
-                    this.showRenameForm = false;
-                    this.currentInstance.InstanceName = this.renameForm.instanceName;
-                    await this.loadInstances(this.currentPage);
-                }
-            } catch (error) {
-                alert(`修改失败：${error.message}`);
-            }
-        },
-
-        // 打开 VNC
-        async openVnc(instance) {
-            this.operatingInstanceId = instance.InstanceId;
-
-            try {
-                const currentKey = window.appStore.keys.getCurrentKey();
-                const result = await DescribeInstanceVncUrl(
-                    this.regionId,
-                    instance.InstanceId,
-                    currentKey.accessKeyId,
-                    currentKey.accessKeySecret
-                );
-
-                if (result.Code) {
-                    alert(`获取 VNC 连接失败：${result.Message}`);
-                } else {
-                    // 判断是否为 Windows 系统
-                    const isWindows = instance.OSType === 'windows' ||
-                                     (instance.OSName && instance.OSName.toLowerCase().includes('windows'));
-
-                    // 构建阿里云 VNC 控制台 URL
-                    const vncUrl = encodeURIComponent(result.VncUrl);
-                    const instanceId = instance.InstanceId;
-                    const consoleUrl = `https://g.alicdn.com/aliyun/ecs-console-vnc2/0.0.8/index.html?vncUrl=${vncUrl}&instanceId=${instanceId}&isWindows=${isWindows}`;
-
-                    // 在新窗口打开
-                    window.open(consoleUrl, '_blank', 'width=1024,height=768');
-                }
-            } catch (error) {
-                alert(`获取 VNC 连接失败：${error.message}`);
-            } finally {
-                this.operatingInstanceId = null;
-            }
+            // 刷新列表以获取最新状态
+            this.loadInstances(this.currentPage);
         }
     };
 }
@@ -657,6 +1014,242 @@ function vswitchList() {
     };
 }
 
+// ECS管理页面组件（移动端专用）
+function ecsManage() {
+    return {
+        instance: null,
+        regionId: '',
+        instanceId: '',
+        basePath: window.APP_CONFIG?.base_path || '',
+        operating: false,
+        loading: true,
+        error: '',
+        showRenameForm: false,
+        isEmbedMode: false,
+        renameForm: {
+            instanceName: ''
+        },
+
+        async init() {
+            // 从 URL hash 参数中读取 instanceId、regionId 和 embed 参数
+            const hash = window.location.hash.substring(1); // 去掉 #
+            const urlParams = new URLSearchParams(hash);
+            this.instanceId = urlParams.get('instanceId');
+            this.regionId = urlParams.get('regionId');
+            this.isEmbedMode = urlParams.get('embed') === 'true';
+
+            if (!this.instanceId || !this.regionId) {
+                this.error = '缺少必要参数';
+                this.loading = false;
+                return;
+            }
+
+            // 通过 API 获取实例详情
+            await this.loadInstance();
+        },
+
+        async loadInstance() {
+            this.loading = true;
+            this.error = '';
+
+            try {
+                const currentKey = window.appStore.keys.getCurrentKey();
+
+                if (!currentKey) {
+                    this.error = '请先登录';
+                    this.loading = false;
+                    return;
+                }
+
+                // 使用 DescribeInstances API 获取单个实例信息
+                const data = await DescribeInstances(
+                    this.regionId,
+                    currentKey.accessKeyId,
+                    currentKey.accessKeySecret,
+                    1,
+                    1,
+                    { instanceIds: [this.instanceId] }
+                );
+
+                if (data.Code) {
+                    this.error = data.Message || '加载失败';
+                    this.loading = false;
+                    return;
+                }
+
+                const instances = data.Instances?.Instance || [];
+                if (instances.length === 0) {
+                    this.error = '实例不存在';
+                    this.loading = false;
+                    return;
+                }
+
+                this.instance = instances[0];
+                this.renameForm.instanceName = this.instance.InstanceName || '';
+            } catch (error) {
+                this.error = error.message || '加载失败';
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        formatStatus(status) {
+            const statusMap = {
+                'Running': { text: '运行中', class: 'running' },
+                'Stopped': { text: '已停止', class: 'stopped' },
+                'Starting': { text: '启动中', class: 'starting' },
+                'Stopping': { text: '停止中', class: 'stopping' },
+            };
+            return statusMap[status] || { text: status, class: 'unknown' };
+        },
+
+        formatTime(timeStr) {
+            if (!timeStr) return '-';
+            return new Date(timeStr).toLocaleString('zh-CN');
+        },
+
+        async startInstance() {
+            if (this.operating) return;
+            this.operating = true;
+
+            try {
+                const currentKey = window.appStore.keys.getCurrentKey();
+                const result = await StartInstance(
+                    this.regionId,
+                    this.instance.InstanceId,
+                    currentKey.accessKeyId,
+                    currentKey.accessKeySecret
+                );
+
+                if (result.Code) {
+                    alert(`启动失败：${result.Message}`);
+                } else {
+                    alert('启动成功，实例正在启动中');
+                    await this.loadInstance(); // 刷新实例信息
+                }
+            } catch (error) {
+                alert(`启动失败：${error.message}`);
+            } finally {
+                this.operating = false;
+            }
+        },
+
+        async stopInstance() {
+            if (this.operating) return;
+            if (!confirm('确定要停止实例吗？')) return;
+
+            this.operating = true;
+
+            try {
+                const currentKey = window.appStore.keys.getCurrentKey();
+                const result = await StopInstance(
+                    this.regionId,
+                    this.instance.InstanceId,
+                    currentKey.accessKeyId,
+                    currentKey.accessKeySecret
+                );
+
+                if (result.Code) {
+                    alert(`停止失败：${result.Message}`);
+                } else {
+                    alert('停止成功，实例正在停止中');
+                    await this.loadInstance(); // 刷新实例信息
+                }
+            } catch (error) {
+                alert(`停止失败：${error.message}`);
+            } finally {
+                this.operating = false;
+            }
+        },
+
+        async rebootInstance() {
+            if (this.operating) return;
+            if (!confirm('确定要重启实例吗？')) return;
+
+            this.operating = true;
+
+            try {
+                const currentKey = window.appStore.keys.getCurrentKey();
+                const result = await RebootInstance(
+                    this.regionId,
+                    this.instance.InstanceId,
+                    currentKey.accessKeyId,
+                    currentKey.accessKeySecret
+                );
+
+                if (result.Code) {
+                    alert(`重启失败：${result.Message}`);
+                } else {
+                    alert('重启成功，实例正在重启中');
+                    await this.loadInstance(); // 刷新实例信息
+                }
+            } catch (error) {
+                alert(`重启失败：${error.message}`);
+            } finally {
+                this.operating = false;
+            }
+        },
+
+        async saveRename() {
+            if (!this.renameForm.instanceName.trim()) {
+                alert('请输入实例名称');
+                return;
+            }
+
+            try {
+                const currentKey = window.appStore.keys.getCurrentKey();
+                const result = await ModifyInstanceAttribute(
+                    this.regionId,
+                    this.instance.InstanceId,
+                    this.renameForm.instanceName,
+                    currentKey.accessKeyId,
+                    currentKey.accessKeySecret
+                );
+
+                if (result.Code) {
+                    alert(`修改失败：${result.Message}`);
+                } else {
+                    alert('修改成功');
+                    this.showRenameForm = false;
+                    await this.loadInstance(); // 刷新实例信息
+                }
+            } catch (error) {
+                alert(`修改失败：${error.message}`);
+            }
+        },
+
+        async openVnc() {
+            try {
+                const currentKey = window.appStore.keys.getCurrentKey();
+                const result = await DescribeInstanceVncUrl(
+                    this.regionId,
+                    this.instance.InstanceId,
+                    currentKey.accessKeyId,
+                    currentKey.accessKeySecret
+                );
+
+                if (result.Code) {
+                    alert(`获取 VNC 连接失败：${result.Message}`);
+                } else {
+                    // 判断是否为 Windows 系统
+                    const isWindows = this.instance.OSType === 'windows' ||
+                                     (this.instance.OSName && this.instance.OSName.toLowerCase().includes('windows'));
+
+                    // 构建阿里云 VNC 控制台 URL
+                    const vncUrl = encodeURIComponent(result.VncUrl);
+                    const instanceId = this.instance.InstanceId;
+                    const consoleUrl = `https://g.alicdn.com/aliyun/ecs-console-vnc2/0.0.8/index.html?vncUrl=${vncUrl}&instanceId=${instanceId}&isWindows=${isWindows}`;
+
+                    // 在新窗口打开
+                    window.open(consoleUrl, '_blank', 'width=1024,height=768');
+                }
+            } catch (error) {
+                alert(`获取 VNC 连接失败：${error.message}`);
+            }
+        }
+    };
+}
+
 // EIP列表组件
 function eipList() {
     return {
@@ -681,16 +1274,66 @@ function eipList() {
         },
 
         async init() {
-            // 使用 window.appStore.keys
-            this.regionId = window.appStore.keys.getDefaultRegion() || 'cn-hangzhou';
+            // 从 URL hash 参数读取状态
+            const hash = window.location.hash.substring(1); // 去掉 #
+            const urlParams = new URLSearchParams(hash);
+
+            // 读取地域
+            this.regionId = urlParams.get('regionId') || window.appStore.keys.getDefaultRegion() || 'cn-hangzhou';
+
+            // 读取分页参数
+            const page = urlParams.get('page');
+            if (page) this.currentPage = parseInt(page);
+
+            const pageSize = urlParams.get('pageSize');
+            if (pageSize) this.pageSize = parseInt(pageSize);
+
+            // 读取搜索条件
+            this.filters.eipName = urlParams.get('eipName') || '';
+            this.filters.eipAddress = urlParams.get('eipAddress') || '';
+            this.filters.allocationId = urlParams.get('allocationId') || '';
+            this.filters.associatedInstanceId = urlParams.get('associatedInstanceId') || '';
+            this.filters.status = urlParams.get('status') || '';
+
             await this.loadRegions();
-            await this.loadEips();
+            await this.loadEips(this.currentPage);
+        },
+
+        // 更新 URL hash 参数
+        updateUrl() {
+            const params = new URLSearchParams();
+
+            // 添加地域
+            params.set('regionId', this.regionId);
+
+            // 添加分页参数
+            if (this.currentPage > 1) {
+                params.set('page', this.currentPage.toString());
+            }
+            if (this.pageSize !== 10) {
+                params.set('pageSize', this.pageSize.toString());
+            }
+
+            // 添加搜索条件
+            if (this.filters.eipName) params.set('eipName', this.filters.eipName);
+            if (this.filters.eipAddress) params.set('eipAddress', this.filters.eipAddress);
+            if (this.filters.allocationId) params.set('allocationId', this.filters.allocationId);
+            if (this.filters.associatedInstanceId) params.set('associatedInstanceId', this.filters.associatedInstanceId);
+            if (this.filters.status) params.set('status', this.filters.status);
+
+            // 更新浏览器 URL hash（不刷新页面）
+            const basePath = window.APP_CONFIG?.base_path || '';
+            const newUrl = `${basePath}/eip_list.html#${params.toString()}`;
+            window.history.pushState({}, '', newUrl);
         },
 
         async loadEips(page = 1) {
             this.loading = true;
             this.error = '';
             this.currentPage = page;
+
+            // 更新 URL
+            this.updateUrl();
 
             try {
                 // 使用 window.appStore.keys
@@ -719,15 +1362,16 @@ function eipList() {
 
                 if (data.Code) {
                     this.error = data.Message || '加载失败';
-                    this.eips = [];
+                    // 不清空原有数据，保持上次加载的数据
                     return;
                 }
 
+                // 成功获取数据后才更新
                 this.eips = data.EipAddresses?.EipAddress || [];
                 this.totalCount = data.TotalCount || 0;
             } catch (error) {
                 this.error = error.message || '加载失败';
-                this.eips = [];
+                // 不清空原有数据，保持上次加载的数据
             } finally {
                 this.loading = false;
             }

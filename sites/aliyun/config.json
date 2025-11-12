@@ -56,5 +56,265 @@
       "path": "/test.html",
       "order": 99
     }
+  },
+  "tables": {
+    "ecs_instances": {
+      "title": "ECS 实例列表",
+      "componentName": "ecsInstances",
+      "apiFunction": "DescribeInstances",
+      "dataPath": "Instances.Instance",
+      "rowKey": "InstanceId",
+      "showRegionSelector": true,
+      "showItemCount": true,
+      "noWrap": true,
+      "fields": [
+        {
+          "field": "InstanceName",
+          "dataField": "InstanceName",
+          "label": "实例名称",
+          "showInFilter": true,
+          "filterType": "input",
+          "filterField": "instanceName",
+          "placeholder": "输入实例名称",
+          "showInTable": true,
+          "class": "font-medium",
+          "defaultValue": "-"
+        },
+        {
+          "field": "InstanceId",
+          "label": "实例ID",
+          "showInTable": true,
+          "class": "font-mono text-sm"
+        },
+        {
+          "field": "Status",
+          "label": "状态",
+          "showInFilter": true,
+          "filterType": "select",
+          "filterField": "status",
+          "filterOptions": [
+            {"value": "Running", "label": "运行中"},
+            {"value": "Stopped", "label": "已停止"},
+            {"value": "Starting", "label": "启动中"},
+            {"value": "Stopping", "label": "停止中"}
+          ],
+          "showInTable": true,
+          "columnType": "badge"
+        },
+        {
+          "field": "VpcAttributes.PrivateIpAddress.IpAddress[0]",
+          "label": "私网IP",
+          "showInFilter": true,
+          "filterType": "input",
+          "filterField": "privateIp",
+          "placeholder": "输入私网IP",
+          "showInTable": true,
+          "class": "font-mono text-sm",
+          "defaultValue": "-"
+        },
+        {
+          "field": "PublicIpAddress.IpAddress[0]",
+          "label": "公网IP",
+          "showInFilter": true,
+          "filterType": "input",
+          "filterField": "publicIp",
+          "placeholder": "输入公网IP",
+          "showInTable": true,
+          "class": "font-mono text-sm",
+          "defaultValue": "-"
+        },
+        {
+          "field": "EipAddress.IpAddress",
+          "label": "EIP",
+          "showInFilter": true,
+          "filterType": "input",
+          "filterField": "eipAddress",
+          "placeholder": "输入EIP地址",
+          "showInTable": true,
+          "class": "font-mono text-sm",
+          "defaultValue": "-"
+        },
+        {
+          "field": "CreationTime",
+          "label": "创建时间",
+          "showInTable": true,
+          "class": "text-sm",
+          "columnType": "datetime"
+        },
+        {
+          "field": "actions",
+          "label": "操作",
+          "showInTable": true,
+          "columnType": "actions"
+        }
+      ]
+    },
+    "eip_list": {
+      "title": "EIP 列表",
+      "componentName": "eipList",
+      "apiFunction": "DescribeEipAddresses",
+      "dataPath": "EipAddresses.EipAddress",
+      "rowKey": "AllocationId",
+      "showRegionSelector": true,
+      "showItemCount": true,
+      "noWrap": false,
+      "fields": [
+        {
+          "field": "Name",
+          "label": "EIP名称",
+          "showInFilter": true,
+          "filterType": "input",
+          "filterField": "eipName",
+          "placeholder": "输入EIP名称",
+          "showInTable": true,
+          "class": "font-medium",
+          "defaultValue": "-"
+        },
+        {
+          "field": "IpAddress",
+          "label": "EIP地址",
+          "showInFilter": true,
+          "filterType": "input",
+          "filterField": "eipAddress",
+          "placeholder": "输入EIP地址",
+          "showInTable": true,
+          "class": "font-mono text-sm"
+        },
+        {
+          "field": "AllocationId",
+          "label": "实例ID",
+          "showInFilter": true,
+          "filterType": "input",
+          "filterField": "allocationId",
+          "placeholder": "输入实例ID",
+          "showInTable": true,
+          "class": "font-mono text-sm"
+        },
+        {
+          "field": "InstanceId",
+          "label": "绑定实例",
+          "showInFilter": true,
+          "filterType": "input",
+          "filterField": "associatedInstanceId",
+          "placeholder": "输入绑定实例ID",
+          "showInTable": true,
+          "class": "font-mono text-sm",
+          "defaultValue": "-"
+        },
+        {
+          "field": "Bandwidth",
+          "label": "带宽",
+          "showInTable": true,
+          "suffix": "Mbps"
+        },
+        {
+          "field": "Status",
+          "label": "状态",
+          "showInFilter": true,
+          "filterType": "select",
+          "filterField": "status",
+          "filterOptions": [
+            {"value": "Available", "label": "可用"},
+            {"value": "InUse", "label": "使用中"},
+            {"value": "Associating", "label": "绑定中"}
+          ],
+          "showInTable": true,
+          "columnType": "badge"
+        }
+      ]
+    },
+    "vpc_list": {
+      "title": "VPC 列表",
+      "componentName": "vpcList",
+      "apiFunction": "DescribeVpcs",
+      "dataPath": "Vpcs.Vpc",
+      "rowKey": "VpcId",
+      "showRegionSelector": true,
+      "showItemCount": true,
+      "noWrap": false,
+      "fields": [
+        {
+          "field": "VpcName",
+          "label": "VPC名称",
+          "showInTable": true,
+          "class": "font-medium",
+          "defaultValue": "-"
+        },
+        {
+          "field": "VpcId",
+          "label": "VPC ID",
+          "showInTable": true,
+          "class": "font-mono text-sm"
+        },
+        {
+          "field": "CidrBlock",
+          "label": "CIDR块",
+          "showInTable": true,
+          "class": "font-mono text-sm"
+        },
+        {
+          "field": "Status",
+          "label": "状态",
+          "showInTable": true,
+          "columnType": "badge"
+        },
+        {
+          "field": "CreationTime",
+          "label": "创建时间",
+          "showInTable": true,
+          "class": "text-sm",
+          "columnType": "datetime"
+        }
+      ]
+    },
+    "vswitch_list": {
+      "title": "交换机列表",
+      "componentName": "vswitchList",
+      "apiFunction": "DescribeVSwitches",
+      "dataPath": "VSwitches.VSwitch",
+      "rowKey": "VSwitchId",
+      "showRegionSelector": true,
+      "showItemCount": true,
+      "noWrap": false,
+      "fields": [
+        {
+          "field": "VSwitchName",
+          "label": "交换机名称",
+          "showInTable": true,
+          "class": "font-medium",
+          "defaultValue": "-"
+        },
+        {
+          "field": "VSwitchId",
+          "label": "交换机ID",
+          "showInTable": true,
+          "class": "font-mono text-sm"
+        },
+        {
+          "field": "CidrBlock",
+          "label": "CIDR块",
+          "showInTable": true,
+          "class": "font-mono text-sm"
+        },
+        {
+          "field": "AvailableIpAddressCount",
+          "label": "可用IP数",
+          "showInTable": true
+        },
+        {
+          "field": "Status",
+          "label": "状态",
+          "showInTable": true,
+          "columnType": "badge"
+        },
+        {
+          "field": "CreationTime",
+          "label": "创建时间",
+          "showInTable": true,
+          "class": "text-sm",
+          "columnType": "datetime"
+        }
+      ]
+    }
   }
 }

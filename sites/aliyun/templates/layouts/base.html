@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% if page.title %}{{ page.title }} - {% endif %}{{ config.site.title }}</title>
 
-    <!-- Tailwind CSS + daisyUI -->
+    <!-- Tailwind CSS + daisyUI (轻量级 UI 框架) -->
     <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        // Tailwind 配置
+        // Tailwind 配置 - 自定义主题色
         tailwind.config = {
             theme: {
                 extend: {
@@ -17,15 +17,10 @@
                         'aliyun-orange': '#ff6a00',
                     }
                 }
-            },
-            daisyui: {
-                themes: ["light", "dark"],
             }
         }
     </script>
 
-    <!-- 自定义样式 (逐步移除) -->
-    <link rel="stylesheet" href="{{ base_path }}/static/css/main.css">
     {% block extra_css %}{% endblock %}
 
     <!-- CryptoJS 用于非 HTTPS 环境的降级方案 -->

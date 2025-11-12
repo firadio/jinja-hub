@@ -1,0 +1,161 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+{% include 'components/navbar.html' %}
+
+<main class="min-h-screen bg-base-200 p-4 lg:p-8" x-data="eipAllocate()">
+    <div class="max-w-3xl mx-auto">
+        <h1 class="text-3xl font-bold mb-6">申请弹性公网IP（EIP）</h1>
+
+        <!-- 错误提示 -->
+        <div x-show="error" x-cloak class="alert alert-error shadow-lg mb-6">
+            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span x-text="error"></span>
+        </div>
+
+        <!-- 成功提示 -->
+        <div x-show="success" x-cloak class="alert alert-success shadow-lg mb-6">
+            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+                <p class="font-bold">申请成功！</p>
+                <p class="text-sm">EIP地址：<span x-text="allocatedEip.eipAddress" class="font-mono"></span></p>
+                <p class="text-sm">实例ID：<span x-text="allocatedEip.allocationId" class="font-mono"></span></p>
+            </div>
+        </div>
+
+        <!-- 申请表单 -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h2 class="card-title mb-4">配置参数</h2>
+
+                <form @submit.prevent="submitForm()">
+                    <!-- 地域选择 -->
+                    <div class="form-control w-full mb-4">
+                        <label class="label">
+                            <span class="label-text">地域 <span class="text-error">*</span></span>
+                        </label>
+                        <select class="select select-bordered w-full" x-model="form.regionId" required :disabled="loading || regionsLoading">
+                            <template x-if="regionsLoading">
+                                <option>加载中...</option>
+                            </template>
+                            <template x-if="!regionsLoading">
+                                <template x-for="region in regions" :key="region.id">
+                                    <option :value="region.id" x-text="region.name" :selected="form.regionId === region.id"></option>
+                                </template>
+                            </template>
+                        </select>
+                    </div>
+
+                    <!-- EIP名称 -->
+                    <div class="form-control w-full mb-4">
+                        <label class="label">
+                            <span class="label-text">EIP名称</span>
+                        </label>
+                        <input type="text" class="input input-bordered w-full" x-model="form.name" placeholder="请输入EIP名称（可选）" :disabled="loading" maxlength="128">
+                        <label class="label">
+                            <span class="label-text-alt text-base-content/60">0-128个字符</span>
+                        </label>
+                    </div>
+
+                    <!-- 带宽峰值 -->
+                    <div class="form-control w-full mb-4">
+                        <label class="label">
+                            <span class="label-text">带宽峰值</span>
+                        </label>
+                        <div class="flex gap-2 items-center">
+                            <input type="range" min="1" max="500" x-model="form.bandwidth" class="range range-primary flex-1" :disabled="loading">
+                            <input type="number" min="1" max="500" x-model="form.bandwidth" class="input input-bordered w-24" :disabled="loading">
+                            <span class="text-base-content/60">Mbps</span>
+                        </div>
+                        <label class="label">
+                            <span class="label-text-alt text-base-content/60">带宽范围：1-500 Mbps，默认5 Mbps</span>
+                        </label>
+                    </div>
+
+                    <!-- 计费方式 -->
+                    <div class="form-control w-full mb-4">
+                        <label class="label">
+                            <span class="label-text">流量计费方式</span>
+                        </label>
+                        <select class="select select-bordered w-full" x-model="form.internetChargeType" :disabled="loading">
+                            <option value="PayByBandwidth">按固定带宽计费</option>
+                            <option value="PayByTraffic">按使用流量计费</option>
+                        </select>
+                        <label class="label">
+                            <span class="label-text-alt text-base-content/60">
+                                <span x-show="form.internetChargeType === 'PayByBandwidth'">按带宽计费：无论实际使用流量多少，按配置的带宽峰值计费</span>
+                                <span x-show="form.internetChargeType === 'PayByTraffic'">按流量计费：按实际使用的流量计费，适合流量波动较大的场景</span>
+                            </span>
+                        </label>
+                    </div>
+
+                    <!-- 线路类型 -->
+                    <div class="form-control w-full mb-4">
+                        <label class="label">
+                            <span class="label-text">线路类型</span>
+                        </label>
+                        <select class="select select-bordered w-full" x-model="form.isp" :disabled="loading">
+                            <option value="BGP">BGP（多线）</option>
+                            <option value="BGP_PRO">BGP（精品）</option>
+                        </select>
+                        <label class="label">
+                            <span class="label-text-alt text-base-content/60">
+                                <span x-show="form.isp === 'BGP'">BGP多线：覆盖全球的BGP网络</span>
+                                <span x-show="form.isp === 'BGP_PRO'">BGP精品：优化的BGP网络，延迟更低，质量更高</span>
+                            </span>
+                        </label>
+                    </div>
+
+                    <!-- 描述 -->
+                    <div class="form-control w-full mb-6">
+                        <label class="label">
+                            <span class="label-text">描述</span>
+                        </label>
+                        <textarea class="textarea textarea-bordered w-full h-24" x-model="form.description" placeholder="请输入EIP描述（可选）" :disabled="loading" maxlength="256"></textarea>
+                        <label class="label">
+                            <span class="label-text-alt text-base-content/60">0-256个字符</span>
+                        </label>
+                    </div>
+
+                    <!-- 提交按钮 -->
+                    <div class="flex gap-3">
+                        <button type="submit" class="btn btn-primary flex-1" :disabled="loading">
+                            <span x-show="!loading">立即申请</span>
+                            <span x-show="loading" class="loading loading-spinner loading-sm"></span>
+                            <span x-show="loading">申请中...</span>
+                        </button>
+                        <button type="button" @click="goBack()" class="btn btn-ghost" :disabled="loading">
+                            返回列表
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 费用说明 -->
+        <div class="alert alert-info mt-6">
+            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div class="text-sm">
+                <p class="font-bold">费用说明</p>
+                <p>• EIP按量付费（PostPaid），申请后立即开始计费</p>
+                <p>• 具体费用请参考阿里云官网价格说明</p>
+                <p>• 不使用时请及时释放，避免产生不必要的费用</p>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+window.APP_CONFIG = {{ config|json|safe }};
+</script>
+<script src="{{ base_path }}/static/js/aliyun-api.js"></script>
+<script src="{{ base_path }}/static/js/auth.js"></script>
+{% endblock %}

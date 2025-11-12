@@ -1,7 +1,18 @@
 <!-- 通用数据表格组件 -->
 <div class="max-w-7xl mx-auto">
-        <!-- 页面标题 -->
-        <h1 class="text-3xl font-bold mb-6" x-text="config.title"></h1>
+        <!-- 页面标题和操作按钮 -->
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-bold" x-text="config.title"></h1>
+            <div x-show="config.actions && config.actions.length > 0">
+                <template x-for="action in config.actions" :key="action.name">
+                    <button @click="handleTableAction && handleTableAction(action)"
+                            class="btn"
+                            :class="action.class || 'btn-primary'"
+                            x-text="action.label">
+                    </button>
+                </template>
+            </div>
+        </div>
 
         <!-- 搜索过滤区 -->
         <div class="card bg-base-100 shadow-xl mb-6" x-show="config.showRegionSelector || (filterFields && filterFields.length > 0)">

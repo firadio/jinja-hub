@@ -296,5 +296,41 @@ async function ReleaseEipAddress(regionId, allocationId, accessKeyId, accessKeyS
     }, accessKeyId, accessKeySecret);
 }
 
+// 申请 EIP
+async function AllocateEipAddress(regionId, accessKeyId, accessKeySecret, options = {}) {
+    const params = {
+        Action: 'AllocateEipAddress',
+        RegionId: regionId
+    };
+
+    // 添加可选参数
+    if (options.bandwidth) {
+        params.Bandwidth = options.bandwidth.toString();
+    }
+    if (options.name) {
+        params.Name = options.name;
+    }
+    if (options.description) {
+        params.Description = options.description;
+    }
+    if (options.internetChargeType) {
+        params.InternetChargeType = options.internetChargeType;
+    }
+    if (options.instanceChargeType) {
+        params.InstanceChargeType = options.instanceChargeType;
+    }
+    if (options.isp) {
+        params.ISP = options.isp;
+    }
+    if (options.resourceGroupId) {
+        params.ResourceGroupId = options.resourceGroupId;
+    }
+    if (options.clientToken) {
+        params.ClientToken = options.clientToken;
+    }
+
+    return await AliyunApi(params, accessKeyId, accessKeySecret);
+}
+
 // 注意: 地域列表缓存管理已迁移到 store.js 的 RegionManager
 // 使用 window.appStore.regions 访问地域相关功能

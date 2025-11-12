@@ -48,6 +48,11 @@
       "path": "/eip_manage.html",
       "order": 5
     },
+    "eip_allocate": {
+      "title": "申请EIP",
+      "path": "/eip_allocate.html",
+      "order": 6
+    },
     "test": {
       "title": "测试页面",
       "path": "/test.html",
@@ -155,6 +160,15 @@
       "showRegionSelector": true,
       "showItemCount": true,
       "noWrap": true,
+      "actions": [
+        {
+          "name": "allocate",
+          "label": "申请EIP",
+          "class": "btn-primary",
+          "type": "navigate",
+          "url": "/eip_allocate.html"
+        }
+      ],
       "fields": [
         {
           "field": "Name",

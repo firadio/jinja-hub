@@ -18,11 +18,20 @@
 </head>
 <body>
     {% block content %}{% endblock %}
-    <!-- 依赖顺序: error-handler.js (最先加载) -> aliyun-api.js -> store.js -> alpine-components.js -> dev-tools.js -->
+    <!-- 依赖顺序: error-handler.js (最先加载) -> aliyun-api.js -> store.js -> 核心工厂 -> 业务组件 -> dev-tools.js -->
     <script src="{{ base_path }}/static/js/error-handler.js"></script>
     <script src="{{ base_path }}/static/js/aliyun-api.js"></script>
     <script src="{{ base_path }}/static/js/store.js"></script>
-    <script src="{{ base_path }}/static/js/alpine-components.js"></script>
+    <!-- 核心工厂 -->
+    <script src="{{ base_path }}/static/js/core/mixins.js"></script>
+    <script src="{{ base_path }}/static/js/core/data-table-factory.js"></script>
+    <script src="{{ base_path }}/static/js/core/resource-manage-factory.js"></script>
+    <!-- 业务组件 -->
+    <script src="{{ base_path }}/static/js/components/ecs.js"></script>
+    <script src="{{ base_path }}/static/js/components/eip.js"></script>
+    <script src="{{ base_path }}/static/js/components/disk.js"></script>
+    <script src="{{ base_path }}/static/js/components/vpc.js"></script>
+    <script src="{{ base_path }}/static/js/components/auth.js"></script>
     <script src="{{ base_path }}/static/js/dev-tools.js"></script>
     {% block extra_js %}{% endblock %}
 </body>

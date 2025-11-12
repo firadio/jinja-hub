@@ -1,22 +1,27 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="corporate">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{{ config.site_title }}{% endblock %}</title>
-    <link rel="stylesheet" href="/{{ site_name }}/static/css/style.css">
+
+    <!-- Tailwind CSS + daisyUI -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.24/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body>
-    <nav class="navbar">
-        <div class="nav-container">
-            <div class="nav-left">
-                {% include 'components/site_switcher.html' %}
-            </div>
-            <div class="nav-brand">{{ config.site_title }}</div>
+    <nav class="navbar bg-primary text-primary-content sticky top-0 z-50 shadow-lg">
+        <div class="navbar-start">
+            {% include 'components/site_switcher.html' %}
+        </div>
+        <div class="navbar-center">
+            <span class="text-xl font-bold">{{ config.site_title }}</span>
+        </div>
+        <div class="navbar-end">
         </div>
     </nav>
 
-    <main class="main-content">
+    <main class="min-h-screen bg-base-200 p-4 lg:p-8">
         {% block content %}{% endblock %}
     </main>
 </body>

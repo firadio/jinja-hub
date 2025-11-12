@@ -5,6 +5,25 @@
 
 <main class="min-h-screen bg-base-200 p-4 lg:p-8" x-data="eipListTable()">
     {% include 'components/data_table.html' %}
+
+    <!-- EIP 专用：管理模态框 -->
+    <div class="modal" :class="{'modal-open': showManageModal}" x-cloak>
+        <div class="modal-box max-w-5xl h-[90vh] p-0">
+            <template x-if="currentEip">
+                <iframe
+                    :src="`{{ base_path }}/eip_manage.html#allocationId=${currentEip.AllocationId}&regionId=${regionId}&embed=true`"
+                    class="w-full h-full rounded-lg"
+                    frameborder="0">
+                </iframe>
+            </template>
+            <div class="absolute top-2 right-2">
+                <button @click="closeManageModal()" class="btn btn-sm btn-circle btn-ghost">✕</button>
+            </div>
+        </div>
+        <form method="dialog" class="modal-backdrop" @click="closeManageModal()">
+            <button>close</button>
+        </form>
+    </div>
 </main>
 {% endblock %}
 

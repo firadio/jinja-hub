@@ -43,6 +43,11 @@
       "nav": "EIP列表",
       "order": 4
     },
+    "eip_manage": {
+      "title": "EIP管理",
+      "path": "/eip_manage.html",
+      "order": 5
+    },
     "test": {
       "title": "测试页面",
       "path": "/test.html",
@@ -149,7 +154,7 @@
       "rowKey": "AllocationId",
       "showRegionSelector": true,
       "showItemCount": true,
-      "noWrap": false,
+      "noWrap": true,
       "fields": [
         {
           "field": "Name",
@@ -212,6 +217,12 @@
           ],
           "showInTable": true,
           "columnType": "badge"
+        },
+        {
+          "field": "actions",
+          "label": "操作",
+          "showInTable": true,
+          "columnType": "actions"
         }
       ]
     },
@@ -223,7 +234,7 @@
       "rowKey": "VpcId",
       "showRegionSelector": true,
       "showItemCount": true,
-      "noWrap": false,
+      "noWrap": true,
       "fields": [
         {
           "field": "VpcName",
@@ -267,7 +278,7 @@
       "rowKey": "VSwitchId",
       "showRegionSelector": true,
       "showItemCount": true,
-      "noWrap": false,
+      "noWrap": true,
       "fields": [
         {
           "field": "VSwitchName",
@@ -310,6 +321,74 @@
     }
   },
   "resource_manage": {
+    "eip": {
+      "title": "EIP管理",
+      "resourceType": "弹性公网IP",
+      "idField": "AllocationId",
+      "nameField": "Name",
+      "statusField": "Status",
+      "apiGetFunction": "DescribeEipAddresses",
+      "apiGetDataPath": "EipAddresses.EipAddress",
+      "infoSections": [
+        {
+          "title": "基本信息",
+          "fields": [
+            {"label": "EIP名称", "field": "Name", "defaultValue": "-"},
+            {"label": "EIP地址", "field": "IpAddress", "class": "font-mono text-sm"},
+            {"label": "实例ID", "field": "AllocationId", "class": "font-mono text-sm"},
+            {"label": "状态", "field": "Status", "type": "badge"}
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "name": "enable_protection",
+          "label": "开启删除保护",
+          "showWhen": "!resource.DeletionProtection",
+          "apiFunction": "EnableEipDeletionProtection",
+          "class": "btn-success",
+          "confirmMessage": null
+        },
+        {
+          "name": "disable_protection",
+          "label": "关闭删除保护",
+          "showWhen": "resource.DeletionProtection === true",
+          "apiFunction": "DisableEipDeletionProtection",
+          "class": "btn-warning",
+          "confirmMessage": "确定要关闭删除保护吗？"
+        },
+        {
+          "name": "release",
+          "label": "释放EIP",
+          "showWhen": "resource.Status === 'Available' && !resource.DeletionProtection",
+          "apiFunction": "ReleaseEipAddress",
+          "class": "btn-error",
+          "confirmMessage": "确定要释放该EIP吗？释放后无法恢复！"
+        },
+        {
+          "name": "rename",
+          "label": "修改名称",
+          "showWhen": "true",
+          "type": "form",
+          "class": "btn-info"
+        }
+      ],
+      "renameConfig": {
+        "apiFunction": "ModifyEipAddressAttribute",
+        "nameField": "Name",
+        "placeholder": "请输入EIP名称"
+      },
+      "detailFields": [
+        {"label": "带宽", "field": "Bandwidth", "suffix": " Mbps"},
+        {"label": "计费方式", "field": "ChargeType"},
+        {"label": "绑定实例", "field": "InstanceId", "class": "font-mono text-sm", "defaultValue": "未绑定"},
+        {"label": "绑定类型", "field": "InstanceType", "defaultValue": "-"},
+        {"label": "删除保护", "field": "DeletionProtection", "formatter": "boolean"},
+        {"label": "ISP", "field": "ISP"},
+        {"label": "地域", "field": "RegionId"},
+        {"label": "创建时间", "field": "AllocationTime", "type": "datetime"}
+      ]
+    },
     "ecs_instance": {
       "title": "实例管理",
       "resourceType": "ECS实例",

@@ -338,7 +338,11 @@ function createResourceManage(resourceKey) {
             // 从 URL hash 参数中读取参数
             const hash = window.location.hash.substring(1);
             const urlParams = new URLSearchParams(hash);
-            this.resourceId = urlParams.get(manageConfig.idField.toLowerCase()) || urlParams.get('instanceId');
+
+            // 尝试多种参数名称格式
+            const idFieldLower = manageConfig.idField.toLowerCase();
+            const idFieldCamel = manageConfig.idField.charAt(0).toLowerCase() + manageConfig.idField.slice(1);
+            this.resourceId = urlParams.get(idFieldCamel) || urlParams.get(idFieldLower) || urlParams.get(manageConfig.idField) || urlParams.get('instanceId');
             this.regionId = urlParams.get('regionId');
             this.isEmbedMode = urlParams.get('embed') === 'true';
 
@@ -370,13 +374,21 @@ function createResourceManage(resourceKey) {
                     return;
                 }
 
+                // 根据资源类型构建查询参数
+                const queryParams = {};
+                if (manageConfig.idField === 'InstanceId') {
+                    queryParams.instanceIds = [this.resourceId];
+                } else if (manageConfig.idField === 'AllocationId') {
+                    queryParams.allocationId = this.resourceId;
+                }
+
                 const data = await apiFunction(
                     this.regionId,
                     currentKey.accessKeyId,
                     currentKey.accessKeySecret,
                     1,
                     1,
-                    { instanceIds: [this.resourceId] }
+                    queryParams
                 );
 
                 if (data.Code) {
@@ -437,6 +449,8 @@ function createResourceManage(resourceKey) {
             if (field.formatter) {
                 if (field.formatter === 'memory') {
                     value = `${value / 1024} GB`;
+                } else if (field.formatter === 'boolean') {
+                    return value === true ? '已开启' : '未开启';
                 }
             }
 
@@ -519,6 +533,30 @@ function createResourceManage(resourceKey) {
                     alert(`操作失败：${result.Message}`);
                 } else {
                     alert(`${action.label}指令已发送`);
+
+                    // 特殊处理：释放操作成功后
+                    if (action.name === 'release') {
+                        if (this.isEmbedMode) {
+                            // iframe 嵌入模式：通知父窗口关闭模态框并刷新列表
+                            if (window.parent && window.parent !== window) {
+                                // 通知父窗口
+                                window.parent.postMessage({ type: 'closeModal', reason: 'released' }, '*');
+                            }
+                        } else {
+                            // 独立页面模式：跳转回列表页
+                            const basePath = window.APP_CONFIG?.base_path || '';
+                            const listPageMap = {
+                                'eip': 'eip_list.html',
+                                'ecs_instance': 'ecs_instances.html'
+                            };
+                            const listPage = listPageMap[manageConfig.idField.includes('Allocation') ? 'eip' : 'ecs_instance'];
+                            if (listPage) {
+                                window.location.href = `${basePath}/${listPage}`;
+                            }
+                        }
+                        return;
+                    }
+
                     await this.loadResource();
                 }
             } catch (error) {
@@ -598,6 +636,21 @@ function ecsManage() {
     return createResourceManage('ecs_instance');
 }
 
+// EIP 管理组件
+function eipManage() {
+    return createResourceManage('eip');
+}
+
+// 开启 EIP 删除保护的封装函数
+async function EnableEipDeletionProtection(regionId, allocationId, accessKeyId, accessKeySecret) {
+    return await SetEipDeletionProtection(regionId, allocationId, true, accessKeyId, accessKeySecret);
+}
+
+// 关闭 EIP 删除保护的封装函数
+async function DisableEipDeletionProtection(regionId, allocationId, accessKeyId, accessKeySecret) {
+    return await SetEipDeletionProtection(regionId, allocationId, false, accessKeyId, accessKeySecret);
+}
+
 // ECS 实例表格组件（带管理功能）
 function ecsInstancesTable() {
     const base = createDataTable('ecs_instances');
@@ -607,6 +660,18 @@ function ecsInstancesTable() {
         // ECS 专用状态
         currentInstance: null,
         showManageModal: false,
+
+        // 初始化时添加消息监听
+        init() {
+            base.init.call(this);
+
+            // 监听来自 iframe 的消息
+            window.addEventListener('message', (event) => {
+                if (event.data.type === 'closeModal') {
+                    this.closeManageModal();
+                }
+            });
+        },
 
         // 操作按钮处理
         handleAction(instance) {
@@ -667,9 +732,75 @@ function vswitchListTable() {
     return createDataTable('vswitch_list');
 }
 
-// EIP 表格组件
+// EIP 表格组件（带管理功能）
 function eipListTable() {
-    return createDataTable('eip_list');
+    const base = createDataTable('eip_list');
+
+    return {
+        ...base,
+        // EIP 专用状态
+        currentEip: null,
+        showManageModal: false,
+
+        // 初始化时添加消息监听
+        init() {
+            base.init.call(this);
+
+            // 监听来自 iframe 的消息
+            window.addEventListener('message', (event) => {
+                if (event.data.type === 'closeModal') {
+                    this.closeManageModal();
+                }
+            });
+        },
+
+        // 操作按钮处理
+        handleAction(eip) {
+            this.openManageModal(eip);
+        },
+
+        // 打开管理模态框
+        openManageModal(eip) {
+            const isMobile = window.innerWidth < 1024;
+
+            if (isMobile) {
+                const basePath = window.APP_CONFIG?.base_path || '';
+                window.location.href = `${basePath}/eip_manage.html#allocationId=${eip.AllocationId}&regionId=${this.regionId}`;
+            } else {
+                this.currentEip = eip;
+                this.showManageModal = true;
+            }
+        },
+
+        closeManageModal() {
+            this.showManageModal = false;
+            this.currentEip = null;
+            this.loadData(this.currentPage);
+        },
+
+        // 重新定义 getter 以修复展开操作符问题
+        get totalPages() {
+            return Math.ceil(this.totalCount / this.pageSize);
+        },
+
+        get startItem() {
+            return (this.currentPage - 1) * this.pageSize + 1;
+        },
+
+        get endItem() {
+            return Math.min(this.currentPage * this.pageSize, this.totalCount);
+        },
+
+        get filterFields() {
+            const tableConfig = window.APP_CONFIG?.tables?.eip_list;
+            return tableConfig?.fields?.filter(f => f.showInFilter) || [];
+        },
+
+        get tableFields() {
+            const tableConfig = window.APP_CONFIG?.tables?.eip_list;
+            return tableConfig?.fields?.filter(f => f.showInTable) || [];
+        }
+    };
 }
 
 // 通用地域加载 Mixin

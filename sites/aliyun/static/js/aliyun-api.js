@@ -72,8 +72,8 @@ function getApiEndpoint(action, regionId) {
     if (action.startsWith('Describe') && (action.includes('Instance') || action.includes('Region'))) {
         return `https://ecs.${regionId}.aliyuncs.com/`;
     }
-    // VPC API (包括 EIP)
-    if (action.includes('Vpc') || action.includes('VSwitch') || action.includes('Eip')) {
+    // VPC API (包括 EIP、删除保护等)
+    if (action.includes('Vpc') || action.includes('VSwitch') || action.includes('Eip') || action === 'DeletionProtection') {
         return `https://vpc.${regionId}.aliyuncs.com/`;
     }
     // 默认 ECS
@@ -83,7 +83,7 @@ function getApiEndpoint(action, regionId) {
 // 获取 API 版本
 function getApiVersion(action) {
     // VPC API 版本
-    if (action.includes('Vpc') || action.includes('VSwitch') || action.includes('Eip')) {
+    if (action.includes('Vpc') || action.includes('VSwitch') || action.includes('Eip') || action === 'DeletionProtection') {
         return '2016-04-28';
     }
     // ECS API 版本
@@ -258,6 +258,41 @@ async function DescribeInstanceVncUrl(regionId, instanceId, accessKeyId, accessK
         Action: 'DescribeInstanceVncUrl',
         RegionId: regionId,
         InstanceId: instanceId
+    }, accessKeyId, accessKeySecret);
+}
+
+// 修改 EIP 名称
+async function ModifyEipAddressAttribute(regionId, allocationId, name, accessKeyId, accessKeySecret) {
+    return await AliyunApi({
+        Action: 'ModifyEipAddressAttribute',
+        RegionId: regionId,
+        AllocationId: allocationId,
+        Name: name
+    }, accessKeyId, accessKeySecret);
+}
+
+// 设置删除保护（通用接口，支持EIP、NAT网关等）
+async function DeletionProtection(regionId, instanceId, protectionEnable, instanceType, accessKeyId, accessKeySecret) {
+    return await AliyunApi({
+        Action: 'DeletionProtection',
+        RegionId: regionId,
+        InstanceId: instanceId,
+        ProtectionEnable: protectionEnable.toString(),
+        Type: instanceType
+    }, accessKeyId, accessKeySecret);
+}
+
+// EIP删除保护封装
+async function SetEipDeletionProtection(regionId, allocationId, protectionEnable, accessKeyId, accessKeySecret) {
+    return await DeletionProtection(regionId, allocationId, protectionEnable, 'EIP', accessKeyId, accessKeySecret);
+}
+
+// 释放 EIP
+async function ReleaseEipAddress(regionId, allocationId, accessKeyId, accessKeySecret) {
+    return await AliyunApi({
+        Action: 'ReleaseEipAddress',
+        RegionId: regionId,
+        AllocationId: allocationId
     }, accessKeyId, accessKeySecret);
 }
 

@@ -220,7 +220,7 @@
         </div>
 
         <!-- 管理模态框 -->
-        <div x-show="showManageModal" x-cloak class="modal modal-open">
+        <div class="modal" :class="{'modal-open': showManageModal}" x-cloak>
             <div class="modal-box max-w-5xl">
                 <h3 class="font-bold text-lg mb-4">实例管理</h3>
                 <template x-if="currentInstance">
@@ -357,7 +357,7 @@
         </div>
 
         <!-- VNC 模态框 -->
-        <div x-show="showVncModal" x-cloak class="modal modal-open">
+        <div class="modal" :class="{'modal-open': showVncModal}" x-cloak>
             <div class="modal-box max-w-6xl">
                 <h3 class="font-bold text-lg mb-4">VNC 远程连接</h3>
                 <template x-if="vncUrl">

@@ -11,21 +11,19 @@ function regionMixin() {
 
             this.regionsLoading = true;
             try {
-                const keyStore = new AccessKeyStore();
-                const currentKey = keyStore.getCurrentKey();
+                const currentKey = window.appStore.keys.getCurrentKey();
 
                 if (!currentKey) {
                     // 未登录时使用默认地域列表
                     this.regions = [{ id: 'cn-hangzhou', name: '华东1(杭州)' }];
-                    // 如果还没有设置regionId,设置为第一个
                     if (!this.regionId) {
                         this.regionId = this.regions[0].id;
                     }
                     return;
                 }
 
-                // 使用缓存管理器加载地域列表
-                const regions = await RegionCache.load(
+                // 使用新的 RegionManager 加载地域列表
+                const regions = await window.appStore.regions.load(
                     currentKey.accessKeyId,
                     currentKey.accessKeySecret
                 );
@@ -34,14 +32,12 @@ function regionMixin() {
 
                 // 确保regionId有效
                 if (this.regions.length > 0) {
-                    // 如果没有设置regionId,或者当前regionId不在列表中,选择第一个
                     if (!this.regionId || !this.regions.find(r => r.id === this.regionId)) {
                         this.regionId = this.regions[0].id;
                     }
                 }
             } catch (e) {
                 console.error('Failed to load regions:', e);
-                // 加载失败时使用默认列表
                 this.regions = [{ id: 'cn-hangzhou', name: '华东1(杭州)' }];
                 if (!this.regionId) {
                     this.regionId = this.regions[0].id;
@@ -73,9 +69,8 @@ function keyManager() {
         },
 
         init() {
-            const keyStore = new AccessKeyStore();
-            this.keys = keyStore.getKeys();
-            this.currentKeyId = keyStore.getCurrentIndex();
+            this.keys = window.appStore.keys.getKeys();
+            this.currentKeyId = window.appStore.keys.getCurrentKeyId();
         },
 
         openModal() {
@@ -87,8 +82,7 @@ function keyManager() {
         },
 
         addKey() {
-            const keyStore = new AccessKeyStore();
-            const result = keyStore.addKey(this.addForm);
+            const result = window.appStore.keys.addKey(this.addForm);
 
             if (!result.success) {
                 alert(result.message);
@@ -101,13 +95,12 @@ function keyManager() {
                 accessKeySecret: ''
             };
 
-            this.keys = keyStore.getKeys();
-            this.currentKeyId = keyStore.getCurrentIndex();
+            this.keys = window.appStore.keys.getKeys();
+            this.currentKeyId = window.appStore.keys.getCurrentKeyId();
         },
 
         switchKey(index) {
-            const keyStore = new AccessKeyStore();
-            if (keyStore.switchKey(index)) {
+            if (window.appStore.keys.switchKey(index)) {
                 location.reload();
             }
         },
@@ -118,10 +111,9 @@ function keyManager() {
                 return;
             }
 
-            const keyStore = new AccessKeyStore();
-            if (keyStore.deleteKey(index)) {
-                this.keys = keyStore.getKeys();
-                this.currentKeyId = keyStore.getCurrentIndex();
+            if (window.appStore.keys.deleteKey(index)) {
+                this.keys = window.appStore.keys.getKeys();
+                this.currentKeyId = window.appStore.keys.getCurrentKeyId();
 
                 const basePath = window.APP_CONFIG?.base_path || '';
                 if (this.keys.length === 0) {
@@ -147,19 +139,13 @@ function keyManager() {
         },
 
         saveEdit() {
-            const keyStore = new AccessKeyStore();
-            const result = keyStore.updateKey(this.editingIndex, this.editForm);
+            if (window.appStore.keys.updateKey(this.editingIndex, this.editForm)) {
+                this.keys = window.appStore.keys.getKeys();
+                this.closeEditModal();
 
-            if (!result.success) {
-                alert(result.message);
-                return;
-            }
-
-            this.keys = keyStore.getKeys();
-            this.closeEditModal();
-
-            if (this.editingIndex === this.currentKeyId) {
-                location.reload();
+                if (this.editingIndex === this.currentKeyId) {
+                    location.reload();
+                }
             }
         },
 
@@ -168,8 +154,7 @@ function keyManager() {
                 return;
             }
 
-            const keyStore = new AccessKeyStore();
-            keyStore.clear();
+            window.appStore.keys.clearAll();
 
             const basePath = window.APP_CONFIG?.base_path || '';
             window.location.href = `${basePath}/login.html`;
@@ -208,8 +193,8 @@ function ecsInstances() {
         },
 
         async init() {
-            const keyStore = new AccessKeyStore();
-            this.regionId = keyStore.getDefaultRegion() || 'cn-hangzhou';
+            // 使用 window.appStore.keys
+            this.regionId = window.appStore.keys.getDefaultRegion() || 'cn-hangzhou';
             await this.loadRegions();
             await this.loadInstances();
         },
@@ -220,8 +205,8 @@ function ecsInstances() {
             this.currentPage = page;
 
             try {
-                const keyStore = new AccessKeyStore();
-                const currentKey = keyStore.getCurrentKey();
+                // 使用 window.appStore.keys
+                const currentKey = window.appStore.keys.getCurrentKey();
 
                 if (!currentKey) {
                     this.error = '请先登录';
@@ -264,8 +249,8 @@ function ecsInstances() {
         },
 
         async changeRegion() {
-            const keyStore = new AccessKeyStore();
-            keyStore.setDefaultRegion(this.regionId);
+            // 使用 window.appStore.keys
+            window.appStore.keys.setDefaultRegion(this.regionId);
             await this.loadInstances(1);
         },
 
@@ -324,8 +309,8 @@ function vpcList() {
         },
 
         async init() {
-            const keyStore = new AccessKeyStore();
-            this.regionId = keyStore.getDefaultRegion() || 'cn-hangzhou';
+            // 使用 window.appStore.keys
+            this.regionId = window.appStore.keys.getDefaultRegion() || 'cn-hangzhou';
             await this.loadRegions();
             await this.loadVpcs();
         },
@@ -336,8 +321,8 @@ function vpcList() {
             this.currentPage = page;
 
             try {
-                const keyStore = new AccessKeyStore();
-                const currentKey = keyStore.getCurrentKey();
+                // 使用 window.appStore.keys
+                const currentKey = window.appStore.keys.getCurrentKey();
 
                 if (!currentKey) {
                     this.error = '请先登录';
@@ -369,8 +354,8 @@ function vpcList() {
         },
 
         async changeRegion() {
-            const keyStore = new AccessKeyStore();
-            keyStore.setDefaultRegion(this.regionId);
+            // 使用 window.appStore.keys
+            window.appStore.keys.setDefaultRegion(this.regionId);
             await this.loadVpcs(1);
         },
 
@@ -416,8 +401,8 @@ function vswitchList() {
         },
 
         async init() {
-            const keyStore = new AccessKeyStore();
-            this.regionId = keyStore.getDefaultRegion() || 'cn-hangzhou';
+            // 使用 window.appStore.keys
+            this.regionId = window.appStore.keys.getDefaultRegion() || 'cn-hangzhou';
             await this.loadRegions();
             await this.loadVSwitches();
         },
@@ -428,8 +413,8 @@ function vswitchList() {
             this.currentPage = page;
 
             try {
-                const keyStore = new AccessKeyStore();
-                const currentKey = keyStore.getCurrentKey();
+                // 使用 window.appStore.keys
+                const currentKey = window.appStore.keys.getCurrentKey();
 
                 if (!currentKey) {
                     this.error = '请先登录';
@@ -461,8 +446,8 @@ function vswitchList() {
         },
 
         async changeRegion() {
-            const keyStore = new AccessKeyStore();
-            keyStore.setDefaultRegion(this.regionId);
+            // 使用 window.appStore.keys
+            window.appStore.keys.setDefaultRegion(this.regionId);
             await this.loadVSwitches(1);
         },
 
@@ -514,8 +499,8 @@ function eipList() {
         },
 
         async init() {
-            const keyStore = new AccessKeyStore();
-            this.regionId = keyStore.getDefaultRegion() || 'cn-hangzhou';
+            // 使用 window.appStore.keys
+            this.regionId = window.appStore.keys.getDefaultRegion() || 'cn-hangzhou';
             await this.loadRegions();
             await this.loadEips();
         },
@@ -526,8 +511,8 @@ function eipList() {
             this.currentPage = page;
 
             try {
-                const keyStore = new AccessKeyStore();
-                const currentKey = keyStore.getCurrentKey();
+                // 使用 window.appStore.keys
+                const currentKey = window.appStore.keys.getCurrentKey();
 
                 if (!currentKey) {
                     this.error = '请先登录';
@@ -570,8 +555,8 @@ function eipList() {
         },
 
         async changeRegion() {
-            const keyStore = new AccessKeyStore();
-            keyStore.setDefaultRegion(this.regionId);
+            // 使用 window.appStore.keys
+            window.appStore.keys.setDefaultRegion(this.regionId);
             await this.loadEips(1);
         },
 
@@ -616,14 +601,14 @@ function loginPage() {
         loading: false,
 
         init() {
-            const keyStore = new AccessKeyStore();
-            this.keys = keyStore.getKeys();
+            // 使用 window.appStore.keys
+            this.keys = window.appStore.keys.getKeys();
             this.hasKeys = this.keys.length > 0;
         },
 
         selectKey(index) {
-            const keyStore = new AccessKeyStore();
-            if (keyStore.switchKey(index)) {
+            // 使用 window.appStore.keys
+            if (window.appStore.keys.switchKey(index)) {
                 const basePath = window.APP_CONFIG?.base_path || '';
                 window.location.href = `${basePath}/ecs_instances.html`;
             }
@@ -635,9 +620,9 @@ function loginPage() {
                 return;
             }
 
-            const keyStore = new AccessKeyStore();
-            if (keyStore.deleteKey(index)) {
-                this.keys = keyStore.getKeys();
+            // 使用 window.appStore.keys
+            if (window.appStore.keys.deleteKey(index)) {
+                this.keys = window.appStore.keys.getKeys();
                 this.hasKeys = this.keys.length > 0;
             }
         },
@@ -656,8 +641,8 @@ function loginPage() {
             this.error = '';
 
             try {
-                const keyStore = new AccessKeyStore();
-                const result = keyStore.addKey(this.form);
+                // 使用 window.appStore.keys
+                const result = window.appStore.keys.addKey(this.form);
 
                 if (!result.success) {
                     this.error = result.message;

@@ -5,7 +5,6 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"flag"
-	"io"
 	"log"
 	"net/http"
 	"os"

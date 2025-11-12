@@ -127,20 +127,7 @@
     transition: all var(--transition-base);
 }
 
-/* 加载动画 */
-.loading {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    border: 2px solid var(--color-border);
-    border-top-color: var(--color-primary);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
+/* 注意: .loading 类定义在 style.css 中,用于页面加载容器 */
 
 /* 禁用状态 */
 .disabled {

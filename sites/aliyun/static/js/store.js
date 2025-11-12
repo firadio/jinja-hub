@@ -31,17 +31,31 @@ class StorageManager {
 
             const data = JSON.parse(item);
 
-            // 检查是否过期
-            if (data.expiresIn) {
-                const age = Date.now() - data.timestamp;
-                if (age > data.expiresIn) {
-                    this.remove(key);
-                    return null;
+            // 新格式: {value, timestamp, expiresIn}
+            if (data && typeof data === 'object' && 'timestamp' in data) {
+                // 检查是否过期
+                if (data.expiresIn) {
+                    const age = Date.now() - data.timestamp;
+                    if (age > data.expiresIn) {
+                        this.remove(key);
+                        return null;
+                    }
                 }
+                return data.value;
             }
 
-            return data.value;
+            // 旧格式: 直接是 JSON 值 (对象、数组、字符串等)
+            // 迁移到新格式
+            this.set(key, data);
+            return data;
         } catch (e) {
+            // JSON 解析失败,可能是旧的纯字符串格式
+            const item = localStorage.getItem(this.prefix + key);
+            if (item) {
+                // 迁移到新格式
+                this.set(key, item);
+                return item;
+            }
             console.error('Storage error:', e);
             return null;
         }

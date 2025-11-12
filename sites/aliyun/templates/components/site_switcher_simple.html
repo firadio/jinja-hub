@@ -6,7 +6,7 @@
     </button>
     <div class="site-switcher-dropdown" id="siteSwitcherDropdown">
         <a href="/" class="dropdown-item platform-home">
-            🏠 {{ platform.name or 'Jinja Hub' }}
+            🏠 {% if platform.name %}{{ platform.name }}{% else %}Jinja Hub{% endif %}
         </a>
         <div class="dropdown-divider"></div>
         {% for site in all_sites %}

@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{{ config.site_title }}{% endblock %}</title>
 
-    <!-- Tailwind CSS + daisyUI -->
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.24/dist/full.min.css" rel="stylesheet" type="text/css" />
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CSS + daisyUI (使用本地 CDN 代理) -->
+    <link href="/cdn/npm/daisyui@4.12.24/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="/cdn/tailwindcss/tailwind.js"></script>
 </head>
 <body>
     <nav class="navbar bg-primary text-primary-content sticky top-0 z-50 shadow-lg">

@@ -153,6 +153,7 @@ func main() {
 
 	log.Printf("%s starting on %s", platformName, *addr)
 	log.Printf("Platform home: http://localhost%s/", *addr)
+	log.Printf("CDN proxy: http://localhost%s/cdn/", *addr)
 
 	// 列出所有启用的站点
 	log.Println("\nEnabled sites:")
@@ -162,6 +163,9 @@ func main() {
 		}
 	}
 
+	// 预加载常用 CDN 文件
+	go prewarmCache()
+
 	if err := http.ListenAndServe(*addr, mux); err != nil {
 		log.Fatal("Failed to start server:", err)
 	}
@@ -169,6 +173,12 @@ func main() {
 
 // handleAllRoutes 处理所有路由
 func handleAllRoutes(w http.ResponseWriter, r *http.Request) {
+	// CDN 代理路由
+	if strings.HasPrefix(r.URL.Path, "/cdn/") {
+		handleCDNProxy(w, r)
+		return
+	}
+
 	// 检查是否通过域名访问
 	host := r.Host
 	// 移除端口号

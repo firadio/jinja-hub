@@ -5,16 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% if page.title %}{{ page.title }} - {% endif %}{{ config.site.title }}</title>
 
-    <!-- Tailwind CSS + daisyUI (轻量级 UI 框架) -->
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.24/dist/full.min.css" rel="stylesheet" type="text/css" />
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CSS + daisyUI (使用本地 CDN 代理) -->
+    <link href="/cdn/npm/daisyui@4.12.24/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="/cdn/tailwindcss/tailwind.js"></script>
 
     {% block extra_css %}{% endblock %}
 
     <!-- CryptoJS 用于非 HTTPS 环境的降级方案 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+    <script src="/cdn/npm/crypto-js@4.2.0/crypto-js.min.js"></script>
     <!-- Alpine.js -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+    <script defer src="/cdn/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
 </head>
 <body>
     {% block content %}{% endblock %}

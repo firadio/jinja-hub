@@ -7,6 +7,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const nunjucks = require('nunjucks');
+const { handleCDNProxy, prewarmCache } = require('./cdn-utils');
 
 // 项目根目录 (servers/nodejs 的上两级)
 const ROOT_PATH = path.join(__dirname, '..', '..');
@@ -286,6 +287,12 @@ const server = http.createServer((req, res) => {
     const url = new URL(req.url, `http://${req.headers.host}`);
     const pathname = url.pathname;
 
+    // CDN 代理路由
+    if (pathname.startsWith('/cdn/')) {
+        handleCDNProxy(req, res);
+        return;
+    }
+
     // 检查是否通过域名访问
     let host = req.headers.host;
     // 移除端口号
@@ -451,6 +458,7 @@ server.listen(port, host, () => {
     const platform = sitesConfig.platform || { name: 'Jinja Hub' };
     console.log(`${platform.name} starting on ${addr}`);
     console.log(`Platform home: http://localhost:${port}/`);
+    console.log(`CDN proxy: http://localhost:${port}/cdn/`);
 
     // 列出所有启用的站点
     console.log('\nEnabled sites:');
@@ -459,4 +467,9 @@ server.listen(port, host, () => {
             console.log(`  - ${siteInfo.name}: http://localhost:${port}/${siteName}/`);
         }
     }
+
+    // 预加载常用 CDN 文件
+    prewarmCache().catch(err => {
+        console.error('Failed to prewarm CDN cache:', err);
+    });
 });

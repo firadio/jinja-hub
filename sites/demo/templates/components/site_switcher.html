@@ -1,207 +1,32 @@
-<!-- 站点切换器组件 -->
-<div class="site-switcher">
-    <button class="site-switcher-btn" id="siteSwitcherBtn">
-        <span class="current-site-icon">{{ site.icon or '🌐' }}</span>
-        <span class="current-site-name">{{ site.name }}</span>
-        <span class="dropdown-arrow">▼</span>
-    </button>
-    <div class="site-switcher-dropdown" id="siteSwitcherDropdown">
-        <div class="dropdown-header">
-            <a href="/" class="platform-link">
-                🏠 {{ platform.name or 'Jinja Hub' }}
-            </a>
-        </div>
-        <div class="dropdown-divider"></div>
-        <div class="dropdown-section">
-            <div class="section-title">可用站点</div>
-            {% for site_id, site_info in all_sites %}
-                {% if site_info.enabled %}
-                <a href="/{{ site_id }}/" class="site-item {% if site_id == site_name %}active{% endif %}">
-                    <span class="site-icon">{{ site_info.icon or '🌐' }}</span>
-                    <div class="site-details">
-                        <div class="site-name">{{ site_info.name }}</div>
-                        {% if site_info.category %}
-                        <div class="site-category">{{ site_info.category }}</div>
-                        {% endif %}
-                    </div>
-                    {% if site_id == site_name %}
-                    <span class="check-mark">✓</span>
-                    {% endif %}
-                </a>
-                {% endif %}
-            {% endfor %}
-        </div>
+<!-- daisyUI 站点切换器 -->
+<div class="dropdown">
+    <div tabindex="0" role="button" class="btn btn-ghost">
+        <span class="text-lg">{{ site.icon or '🌐' }}</span>
+        <span>{{ site.name }}</span>
+        <svg class="fill-current w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+            <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
+        </svg>
     </div>
+    <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow-lg bg-base-100 rounded-box w-64 mt-4">
+        <li class="menu-title">
+            <a href="/" class="flex items-center gap-2">
+                <span>🏠</span>
+                <span>{{ platform.name or 'Jinja Hub' }}</span>
+            </a>
+        </li>
+        <div class="divider my-0"></div>
+        {% for site_id, site_info in all_sites %}
+        {% if site_info.enabled %}
+        <li>
+            <a href="/{{ site_id }}/" class="{% if site_id == site_name %}active{% endif %}">
+                <span>{{ site_info.icon or '🌐' }}</span>
+                <span>{{ site_info.name }}</span>
+                {% if site_id == site_name %}
+                <span class="badge badge-primary badge-sm">✓</span>
+                {% endif %}
+            </a>
+        </li>
+        {% endif %}
+        {% endfor %}
+    </ul>
 </div>
-
-<style>
-.site-switcher {
-    position: relative;
-    display: inline-block;
-}
-
-.site-switcher-btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 6px;
-    color: white;
-    cursor: pointer;
-    font-size: 14px;
-    transition: all 0.2s;
-}
-
-.site-switcher-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.3);
-}
-
-.current-site-icon {
-    font-size: 18px;
-}
-
-.current-site-name {
-    font-weight: 500;
-}
-
-.dropdown-arrow {
-    font-size: 10px;
-    margin-left: 4px;
-    transition: transform 0.2s;
-}
-
-.site-switcher.active .dropdown-arrow {
-    transform: rotate(180deg);
-}
-
-.site-switcher-dropdown {
-    position: absolute;
-    top: calc(100% + 8px);
-    left: 0;
-    min-width: 280px;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(-10px);
-    transition: all 0.2s;
-    z-index: 1000;
-}
-
-.site-switcher.active .site-switcher-dropdown {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-}
-
-.dropdown-header {
-    padding: 12px 16px;
-}
-
-.platform-link {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: #667eea;
-    text-decoration: none;
-    font-weight: 600;
-    font-size: 14px;
-}
-
-.platform-link:hover {
-    color: #5568d3;
-}
-
-.dropdown-divider {
-    height: 1px;
-    background: #e5e7eb;
-    margin: 0;
-}
-
-.dropdown-section {
-    padding: 8px 0;
-}
-
-.section-title {
-    padding: 8px 16px;
-    font-size: 12px;
-    color: #6b7280;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
-.site-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 16px;
-    color: #374151;
-    text-decoration: none;
-    transition: background 0.15s;
-}
-
-.site-item:hover {
-    background: #f3f4f6;
-}
-
-.site-item.active {
-    background: #ede9fe;
-}
-
-.site-icon {
-    font-size: 20px;
-    flex-shrink: 0;
-}
-
-.site-details {
-    flex: 1;
-}
-
-.site-name {
-    font-weight: 500;
-    font-size: 14px;
-    color: #111827;
-}
-
-.site-category {
-    font-size: 12px;
-    color: #6b7280;
-    margin-top: 2px;
-}
-
-.check-mark {
-    color: #667eea;
-    font-weight: bold;
-}
-</style>
-
-<script>
-// 站点切换器交互逻辑
-(function() {
-    const switcher = document.querySelector('.site-switcher');
-    const btn = document.getElementById('siteSwitcherBtn');
-    const dropdown = document.getElementById('siteSwitcherDropdown');
-
-    if (!btn || !dropdown) return;
-
-    // 切换下拉菜单
-    btn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        switcher.classList.toggle('active');
-    });
-
-    // 点击其他地方关闭
-    document.addEventListener('click', function() {
-        switcher.classList.remove('active');
-    });
-
-    // 阻止下拉菜单内部点击冒泡
-    dropdown.addEventListener('click', function(e) {
-        e.stopPropagation();
-    });
-})();
-</script>

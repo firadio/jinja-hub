@@ -3,75 +3,97 @@
 {% block title %}{{ page.title }} - {{ config.site_title }}{% endblock %}
 
 {% block content %}
-<div class="demo-container">
-    <h1>🎨 欢迎来到演示站点</h1>
-    <p class="subtitle">{{ page.description }}</p>
-
-    <div class="card">
-        <h2>站点切换功能</h2>
-        <p>点击左上角的站点切换器,可以在不同站点之间切换:</p>
-        <ul>
-            <li>查看所有可用站点</li>
-            <li>返回平台首页</li>
-            <li>快速访问其他项目</li>
-        </ul>
+<div class="max-w-5xl mx-auto">
+    <div class="text-center mb-8">
+        <h1 class="text-4xl font-bold mb-4">🎨 欢迎来到演示站点</h1>
+        <p class="text-xl text-base-content/70">{{ page.description }}</p>
     </div>
 
-    <div class="card">
-        <h2>当前站点信息</h2>
-        <table>
-            <tr>
-                <td><strong>站点名称:</strong></td>
-                <td>{{ site.name }}</td>
-            </tr>
-            <tr>
-                <td><strong>站点ID:</strong></td>
-                <td>{{ site_name }}</td>
-            </tr>
-            <tr>
-                <td><strong>描述:</strong></td>
-                <td>{{ site.description }}</td>
-            </tr>
-            <tr>
-                <td><strong>分类:</strong></td>
-                <td>{{ site.category }}</td>
-            </tr>
-        </table>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <!-- 站点切换功能 -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h2 class="card-title">站点切换功能</h2>
+                <p>点击左上角的站点切换器,可以在不同站点之间切换:</p>
+                <ul class="list-disc list-inside space-y-1 text-sm mt-2">
+                    <li>查看所有可用站点</li>
+                    <li>返回平台首页</li>
+                    <li>快速访问其他项目</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 当前站点信息 -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h2 class="card-title">当前站点信息</h2>
+                <div class="overflow-x-auto">
+                    <table class="table table-sm">
+                        <tbody>
+                            <tr>
+                                <th>站点名称</th>
+                                <td>{{ site.name }}</td>
+                            </tr>
+                            <tr>
+                                <th>站点ID</th>
+                                <td><code class="text-xs">{{ site_name }}</code></td>
+                            </tr>
+                            <tr>
+                                <th>描述</th>
+                                <td>{{ site.description }}</td>
+                            </tr>
+                            <tr>
+                                <th>分类</th>
+                                <td>{{ site.category }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div class="card">
-        <h2>平台信息</h2>
-        <table>
-            <tr>
-                <td><strong>平台名称:</strong></td>
-                <td>{{ platform.name }}</td>
-            </tr>
-            <tr>
-                <td><strong>描述:</strong></td>
-                <td>{{ platform.description }}</td>
-            </tr>
-            <tr>
-                <td><strong>版本:</strong></td>
-                <td>{{ platform.version }}</td>
-            </tr>
-        </table>
+    <!-- 平台信息 -->
+    <div class="card bg-base-100 shadow-xl mb-6">
+        <div class="card-body">
+            <h2 class="card-title">平台信息</h2>
+            <div class="overflow-x-auto">
+                <table class="table table-sm">
+                    <tbody>
+                        <tr>
+                            <th class="w-32">平台名称</th>
+                            <td>{{ platform.name }}</td>
+                        </tr>
+                        <tr>
+                            <th>描述</th>
+                            <td>{{ platform.description }}</td>
+                        </tr>
+                        <tr>
+                            <th>版本</th>
+                            <td><div class="badge badge-info">{{ platform.version }}</div></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
-    <div class="card">
-        <h2>所有站点列表</h2>
-        <ul class="site-list">
-            {% for site_id, site_info in all_sites %}
-            <li>
-                <a href="/{{ site_id }}/">
-                    <span class="site-icon">{{ site_info.icon or '🌐' }}</span>
-                    <strong>{{ site_info.name }}</strong>
-                    <span class="badge {% if site_info.enabled %}badge-success{% else %}badge-disabled{% endif %}">
+    <!-- 所有站点列表 -->
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title">所有站点列表</h2>
+            <div class="space-y-2">
+                {% for site_id, site_info in all_sites %}
+                <a href="/{{ site_id }}/" class="flex items-center gap-3 p-3 rounded-lg bg-base-200 hover:bg-base-300 transition-colors">
+                    <span class="text-2xl">{{ site_info.icon or '🌐' }}</span>
+                    <span class="flex-1 font-semibold">{{ site_info.name }}</span>
+                    <div class="badge {% if site_info.enabled %}badge-success{% else %}badge-error{% endif %}">
                         {{ '已启用' if site_info.enabled else '未启用' }}
-                    </span>
+                    </div>
                 </a>
-            </li>
-            {% endfor %}
-        </ul>
+                {% endfor %}
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

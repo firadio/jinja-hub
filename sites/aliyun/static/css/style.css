@@ -88,6 +88,12 @@ body {
     gap: 10px;
 }
 
+/* 移动端菜单按钮和遮罩层 - 桌面端隐藏 */
+.mobile-menu-btn,
+.mobile-menu-overlay {
+    display: none;
+}
+
 /* 主内容区 */
 .main-content {
     min-height: calc(100vh - 60px);

@@ -81,6 +81,22 @@
                                @keyup.enter="search()">
                     </div>
 
+                    <!-- 实例状态 -->
+                    <div class="form-control w-full">
+                        <label class="label">
+                            <span class="label-text">实例状态</span>
+                        </label>
+                        <select class="select select-bordered w-full"
+                                x-model="filters.status"
+                                @change="search()">
+                            <option value="">全部状态</option>
+                            <option value="Running">运行中</option>
+                            <option value="Stopped">已停止</option>
+                            <option value="Starting">启动中</option>
+                            <option value="Stopping">停止中</option>
+                        </select>
+                    </div>
+
                     <!-- 搜索按钮 -->
                     <div class="form-control w-full">
                         <label class="label">

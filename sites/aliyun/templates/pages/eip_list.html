@@ -81,6 +81,21 @@
                                @keyup.enter="search()">
                     </div>
 
+                    <!-- EIP状态 -->
+                    <div class="form-control w-full">
+                        <label class="label">
+                            <span class="label-text">EIP状态</span>
+                        </label>
+                        <select class="select select-bordered w-full"
+                                x-model="filters.status"
+                                @change="search()">
+                            <option value="">全部状态</option>
+                            <option value="Available">可用</option>
+                            <option value="InUse">使用中</option>
+                            <option value="Associating">绑定中</option>
+                        </select>
+                    </div>
+
                     <!-- 搜索按钮 -->
                     <div class="form-control w-full">
                         <label class="label">

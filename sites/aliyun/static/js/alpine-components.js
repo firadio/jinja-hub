@@ -177,7 +177,8 @@ function ecsInstances() {
             instanceName: '',
             privateIp: '',
             publicIp: '',
-            eipAddress: ''
+            eipAddress: '',
+            status: ''
         },
 
         get totalPages() {
@@ -218,6 +219,7 @@ function ecsInstances() {
                 if (this.filters.privateIp) searchFilters.privateIp = this.filters.privateIp;
                 if (this.filters.publicIp) searchFilters.publicIp = this.filters.publicIp;
                 if (this.filters.eipAddress) searchFilters.eipAddress = this.filters.eipAddress;
+                if (this.filters.status) searchFilters.status = this.filters.status;
 
                 const data = await DescribeInstances(
                     this.regionId,
@@ -493,7 +495,8 @@ function eipList() {
             eipName: '',
             eipAddress: '',
             allocationId: '',
-            associatedInstanceId: ''
+            associatedInstanceId: '',
+            status: ''
         },
 
         get totalPages() {
@@ -526,6 +529,7 @@ function eipList() {
                 if (this.filters.eipAddress) searchFilters.eipAddress = this.filters.eipAddress;
                 if (this.filters.allocationId) searchFilters.allocationId = this.filters.allocationId;
                 if (this.filters.associatedInstanceId) searchFilters.associatedInstanceId = this.filters.associatedInstanceId;
+                if (this.filters.status) searchFilters.status = this.filters.status;
 
                 const data = await DescribeEipAddresses(
                     this.regionId,

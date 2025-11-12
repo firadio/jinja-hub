@@ -1,0 +1,15 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div x-data="diskManage()">
+    {% include "components/resource_manage.html" %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+window.APP_CONFIG = {{ config|json|safe }};
+</script>
+<script src="{{ base_path }}/static/js/aliyun-api.js"></script>
+<script src="{{ base_path }}/static/js/auth.js"></script>
+{% endblock %}

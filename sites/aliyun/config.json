@@ -53,6 +53,17 @@
       "path": "/eip_allocate.html",
       "order": 6
     },
+    "disk_list": {
+      "title": "云盘列表",
+      "path": "/disk_list.html",
+      "nav": "云盘列表",
+      "order": 7
+    },
+    "disk_manage": {
+      "title": "云盘管理",
+      "path": "/disk_manage.html",
+      "order": 8
+    },
     "test": {
       "title": "测试页面",
       "path": "/test.html",
@@ -332,6 +343,98 @@
           "columnType": "datetime"
         }
       ]
+    },
+    "disk_list": {
+      "title": "云盘列表",
+      "componentName": "diskList",
+      "apiFunction": "DescribeDisks",
+      "dataPath": "Disks.Disk",
+      "rowKey": "DiskId",
+      "showRegionSelector": true,
+      "showItemCount": true,
+      "noWrap": true,
+      "fields": [
+        {
+          "field": "DiskName",
+          "label": "云盘名称",
+          "showInFilter": true,
+          "filterType": "input",
+          "filterField": "diskName",
+          "placeholder": "输入云盘名称",
+          "showInTable": true,
+          "class": "font-medium",
+          "defaultValue": "-"
+        },
+        {
+          "field": "DiskId",
+          "label": "云盘ID",
+          "showInFilter": true,
+          "filterType": "input",
+          "filterField": "diskId",
+          "placeholder": "输入云盘ID",
+          "showInTable": true,
+          "class": "font-mono text-sm"
+        },
+        {
+          "field": "Size",
+          "label": "容量",
+          "showInTable": true,
+          "suffix": "GB"
+        },
+        {
+          "field": "Category",
+          "label": "云盘类型",
+          "showInFilter": true,
+          "filterType": "select",
+          "filterField": "category",
+          "filterOptions": [
+            {"value": "cloud", "label": "普通云盘"},
+            {"value": "cloud_efficiency", "label": "高效云盘"},
+            {"value": "cloud_ssd", "label": "SSD云盘"},
+            {"value": "cloud_essd", "label": "ESSD云盘"}
+          ],
+          "showInTable": true
+        },
+        {
+          "field": "Status",
+          "label": "状态",
+          "showInFilter": true,
+          "filterType": "select",
+          "filterField": "status",
+          "filterOptions": [
+            {"value": "In_use", "label": "使用中"},
+            {"value": "Available", "label": "待挂载"},
+            {"value": "Attaching", "label": "挂载中"},
+            {"value": "Detaching", "label": "卸载中"}
+          ],
+          "showInTable": true,
+          "columnType": "badge"
+        },
+        {
+          "field": "InstanceId",
+          "label": "挂载实例",
+          "showInFilter": true,
+          "filterType": "input",
+          "filterField": "instanceId",
+          "placeholder": "输入实例ID",
+          "showInTable": true,
+          "class": "font-mono text-sm",
+          "defaultValue": "-"
+        },
+        {
+          "field": "CreationTime",
+          "label": "创建时间",
+          "showInTable": true,
+          "class": "text-sm",
+          "columnType": "datetime"
+        },
+        {
+          "field": "actions",
+          "label": "操作",
+          "showInTable": true,
+          "columnType": "actions"
+        }
+      ]
     }
   },
   "resource_manage": {
@@ -476,6 +579,82 @@
         {"label": "EIP 地址", "field": "EipAddress.IpAddress", "class": "font-mono text-sm", "defaultValue": "-"},
         {"label": "创建时间", "field": "CreationTime", "type": "datetime"},
         {"label": "到期时间", "field": "ExpiredTime", "type": "datetime"}
+      ]
+    },
+    "disk": {
+      "title": "云盘管理",
+      "resourceType": "云盘",
+      "idField": "DiskId",
+      "nameField": "DiskName",
+      "statusField": "Status",
+      "apiGetFunction": "DescribeDisks",
+      "apiGetDataPath": "Disks.Disk",
+      "infoSections": [
+        {
+          "title": "基本信息",
+          "fields": [
+            {"label": "云盘名称", "field": "DiskName", "defaultValue": "-"},
+            {"label": "云盘ID", "field": "DiskId", "class": "font-mono text-sm"},
+            {"label": "状态", "field": "Status", "type": "badge"}
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "name": "attach",
+          "label": "挂载云盘",
+          "showWhen": "resource.Status === 'Available'",
+          "type": "custom",
+          "class": "btn-success"
+        },
+        {
+          "name": "detach",
+          "label": "卸载云盘",
+          "showWhen": "resource.Status === 'In_use'",
+          "apiFunction": "DetachDisk",
+          "class": "btn-warning",
+          "confirmMessage": "确定要卸载该云盘吗？"
+        },
+        {
+          "name": "enable_protection",
+          "label": "开启删除保护",
+          "showWhen": "!resource.DeleteAutoSnapshot && resource.Status !== 'In_use'",
+          "apiFunction": "ModifyDiskAttribute",
+          "class": "btn-info",
+          "confirmMessage": null
+        },
+        {
+          "name": "delete",
+          "label": "删除云盘",
+          "showWhen": "resource.Status === 'Available' && resource.Portable",
+          "apiFunction": "DeleteDisk",
+          "class": "btn-error",
+          "confirmMessage": "确定要删除该云盘吗？删除后无法恢复！"
+        },
+        {
+          "name": "rename",
+          "label": "修改名称",
+          "showWhen": "true",
+          "type": "form",
+          "class": "btn-info"
+        }
+      ],
+      "renameConfig": {
+        "apiFunction": "ModifyDiskAttribute",
+        "nameField": "DiskName",
+        "placeholder": "请输入云盘名称"
+      },
+      "detailFields": [
+        {"label": "容量", "field": "Size", "suffix": " GB"},
+        {"label": "云盘类型", "field": "Category"},
+        {"label": "挂载实例", "field": "InstanceId", "class": "font-mono text-sm", "defaultValue": "未挂载"},
+        {"label": "设备名", "field": "Device", "class": "font-mono text-sm", "defaultValue": "-"},
+        {"label": "可卸载", "field": "Portable", "formatter": "boolean"},
+        {"label": "随实例释放", "field": "DeleteWithInstance", "formatter": "boolean"},
+        {"label": "是否加密", "field": "Encrypted", "formatter": "boolean"},
+        {"label": "地域", "field": "RegionId"},
+        {"label": "可用区", "field": "ZoneId"},
+        {"label": "创建时间", "field": "CreationTime", "type": "datetime"}
       ]
     }
   }

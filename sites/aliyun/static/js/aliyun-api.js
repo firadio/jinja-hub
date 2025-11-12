@@ -332,5 +332,73 @@ async function AllocateEipAddress(regionId, accessKeyId, accessKeySecret, option
     return await AliyunApi(params, accessKeyId, accessKeySecret);
 }
 
+// 描述云盘
+async function DescribeDisks(regionId, accessKeyId, accessKeySecret, pageNumber = 1, pageSize = 50, filters = {}) {
+    const params = {
+        Action: 'DescribeDisks',
+        RegionId: regionId,
+        PageNumber: pageNumber.toString(),
+        PageSize: pageSize.toString()
+    };
+
+    // 添加搜索过滤参数
+    if (filters.diskName) {
+        params.DiskName = filters.diskName;
+    }
+    if (filters.diskId) {
+        params.DiskIds = JSON.stringify([filters.diskId]);
+    }
+    if (filters.instanceId) {
+        params.InstanceId = filters.instanceId;
+    }
+    if (filters.category) {
+        params.Category = filters.category;
+    }
+    if (filters.status) {
+        params.Status = filters.status;
+    }
+
+    return await AliyunApi(params, accessKeyId, accessKeySecret);
+}
+
+// 挂载云盘
+async function AttachDisk(regionId, diskId, instanceId, accessKeyId, accessKeySecret) {
+    return await AliyunApi({
+        Action: 'AttachDisk',
+        RegionId: regionId,
+        DiskId: diskId,
+        InstanceId: instanceId
+    }, accessKeyId, accessKeySecret);
+}
+
+// 卸载云盘
+async function DetachDisk(regionId, diskId, instanceId, accessKeyId, accessKeySecret) {
+    return await AliyunApi({
+        Action: 'DetachDisk',
+        RegionId: regionId,
+        DiskId: diskId,
+        InstanceId: instanceId
+    }, accessKeyId, accessKeySecret);
+}
+
+// 删除云盘
+async function DeleteDisk(regionId, diskId, accessKeyId, accessKeySecret) {
+    return await AliyunApi({
+        Action: 'DeleteDisk',
+        RegionId: regionId,
+        DiskId: diskId
+    }, accessKeyId, accessKeySecret);
+}
+
+// 修改云盘属性
+async function ModifyDiskAttribute(regionId, diskId, diskName, accessKeyId, accessKeySecret) {
+    return await AliyunApi({
+        Action: 'ModifyDiskAttribute',
+        RegionId: regionId,
+        DiskId: diskId,
+        DiskName: diskName
+    }, accessKeyId, accessKeySecret);
+}
+
 // 注意: 地域列表缓存管理已迁移到 store.js 的 RegionManager
 // 使用 window.appStore.regions 访问地域相关功能

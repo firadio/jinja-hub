@@ -38,13 +38,34 @@ function isCompressible(contentType) {
 }
 
 /**
+ * 添加 charset 到 Content-Type
+ */
+function addCharset(contentType) {
+    // 如果已经包含 charset，不重复添加
+    if (contentType.includes('charset')) {
+        return contentType;
+    }
+
+    // 对文本类型添加 charset=UTF-8
+    const textTypes = ['text/', 'application/json', 'application/javascript', 'application/xml'];
+    if (textTypes.some(type => contentType.startsWith(type))) {
+        return `${contentType}; charset=UTF-8`;
+    }
+
+    return contentType;
+}
+
+/**
  * 发送响应（带 gzip 压缩支持）
  */
 function sendCompressedResponse(res, req, contentType, buffer) {
+    // 添加 charset
+    const fullContentType = addCharset(contentType);
+
     // 如果内容小于 1KB 或不可压缩，直接发送
     if (buffer.length < 1024 || !isCompressible(contentType) || !supportsGzip(req)) {
         res.writeHead(200, {
-            'Content-Type': contentType,
+            'Content-Type': fullContentType,
             'Content-Length': buffer.length,
             'Cache-Control': 'public, max-age=31536000',
         });
@@ -57,7 +78,7 @@ function sendCompressedResponse(res, req, contentType, buffer) {
         if (err) {
             // 压缩失败，发送原始内容
             res.writeHead(200, {
-                'Content-Type': contentType,
+                'Content-Type': fullContentType,
                 'Content-Length': buffer.length,
                 'Cache-Control': 'public, max-age=31536000',
             });
@@ -66,7 +87,7 @@ function sendCompressedResponse(res, req, contentType, buffer) {
         }
 
         res.writeHead(200, {
-            'Content-Type': contentType,
+            'Content-Type': fullContentType,
             'Content-Encoding': 'gzip',
             'Content-Length': compressed.length,
             'Cache-Control': 'public, max-age=31536000',

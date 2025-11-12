@@ -111,8 +111,7 @@ function keyManager() {
     };
 }
 
-// ECS实例列表组件
-
+// 登录页面组件
 function loginPage() {
     return {
         keys: [],

@@ -104,8 +104,7 @@ async function DisableEipDeletionProtection(regionId, allocationId, accessKeyId,
     return await SetEipDeletionProtection(regionId, allocationId, false, accessKeyId, accessKeySecret);
 }
 
-// ECS 实例表格组件（带管理功能）
-
+// EIP 表格组件（带管理功能）
 function eipListTable() {
     const base = createDataTable('eip_list');
 
@@ -188,5 +187,3 @@ function eipListTable() {
         }
     };
 }
-
-// 通用地域加载 Mixin

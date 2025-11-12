@@ -3,6 +3,7 @@ function diskManage() {
     return createResourceManage('disk');
 }
 
+// 云盘表格组件（带管理功能）
 function diskListTable() {
     const base = createDataTable('disk_list');
 
@@ -72,5 +73,3 @@ function diskListTable() {
         }
     };
 }
-
-// EIP 表格组件（带管理功能）

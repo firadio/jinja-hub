@@ -148,6 +148,9 @@ async function DescribeInstances(regionId, accessKeyId, accessKeySecret, pageNum
         // EipAddresses 应该是一个 JSON 数组字符串
         params.EipAddresses = JSON.stringify([filters.eipAddress]);
     }
+    if (filters.status) {
+        params.Status = filters.status;
+    }
 
     return await AliyunApi(params, accessKeyId, accessKeySecret);
 }
@@ -193,6 +196,9 @@ async function DescribeEipAddresses(regionId, accessKeyId, accessKeySecret, page
     }
     if (filters.associatedInstanceId) {
         params.AssociatedInstanceId = filters.associatedInstanceId;
+    }
+    if (filters.status) {
+        params.Status = filters.status;
     }
 
     return await AliyunApi(params, accessKeyId, accessKeySecret);

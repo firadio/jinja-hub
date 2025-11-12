@@ -108,16 +108,48 @@ function isCompressible(contentType) {
 }
 
 /**
+ * 添加 charset 到 Content-Type
+ */
+function addCharset(contentType) {
+    // 如果已经包含 charset，不重复添加
+    if (contentType.includes('charset')) {
+        return contentType;
+    }
+
+    // 对文本类型添加 charset=UTF-8
+    const textTypes = ['text/', 'application/json', 'application/javascript', 'application/xml'];
+    if (textTypes.some(type => contentType.startsWith(type))) {
+        return `${contentType}; charset=UTF-8`;
+    }
+
+    return contentType;
+}
+
+/**
  * 发送响应（带 gzip 压缩支持）
  */
 function sendResponse(res, statusCode, contentType, content, req) {
+    // 添加 charset
+    const fullContentType = addCharset(contentType);
+
     // 对于字符串内容，转换为 Buffer
     const buffer = Buffer.isBuffer(content) ? content : Buffer.from(content);
+
+    // 限制压缩内容大小（5MB），防止压缩炸弹攻击
+    const maxCompressSize = 5 * 1024 * 1024;
+    if (buffer.length > maxCompressSize) {
+        res.writeHead(statusCode, {
+            'Content-Type': fullContentType,
+            'Content-Length': buffer.length,
+        });
+        res.end(buffer);
+        return;
+    }
 
     // 如果内容小于 1KB 或不可压缩，直接发送
     if (buffer.length < 1024 || !isCompressible(contentType) || !supportsGzip(req)) {
         res.writeHead(statusCode, {
-            'Content-Type': contentType,
+            'Content-Type': fullContentType,
             'Content-Length': buffer.length,
         });
         res.end(buffer);
@@ -129,7 +161,7 @@ function sendResponse(res, statusCode, contentType, content, req) {
         if (err) {
             // 压缩失败，发送原始内容
             res.writeHead(statusCode, {
-                'Content-Type': contentType,
+                'Content-Type': fullContentType,
                 'Content-Length': buffer.length,
             });
             res.end(buffer);
@@ -137,7 +169,7 @@ function sendResponse(res, statusCode, contentType, content, req) {
         }
 
         res.writeHead(statusCode, {
-            'Content-Type': contentType,
+            'Content-Type': fullContentType,
             'Content-Encoding': 'gzip',
             'Content-Length': compressed.length,
         });
@@ -168,6 +200,15 @@ function handleDomainSiteRoute(req, res, siteName, pathname) {
     // 静态文件路由
     if (pathname.startsWith('/static/')) {
         const filePath = path.join(getSitePath(siteName), pathname);
+        const normalizedPath = path.normalize(filePath);
+        const sitePath = getSitePath(siteName);
+
+        // 防止路径遍历攻击
+        if (!normalizedPath.startsWith(sitePath)) {
+            res.writeHead(403);
+            res.end('Forbidden');
+            return;
+        }
 
         fs.readFile(filePath, (err, data) => {
             if (err) {
@@ -346,8 +387,61 @@ function renderSitePage(req, res, siteName, pageName) {
     renderSitePageWithBasePath(req, res, siteName, pageName, `/${siteName}`);
 }
 
+// 简单的内存缓存型速率限制器
+const rateLimiter = {
+    requests: new Map(),
+    windowMs: 60000, // 1分钟窗口
+    maxRequests: 100, // 每分钟最多100个请求
+
+    check(ip) {
+        const now = Date.now();
+        const key = ip;
+
+        if (!this.requests.has(key)) {
+            this.requests.set(key, [now]);
+            return true;
+        }
+
+        const timestamps = this.requests.get(key).filter(t => now - t < this.windowMs);
+        timestamps.push(now);
+        this.requests.set(key, timestamps);
+
+        // 清理旧数据（简单的内存管理）
+        if (this.requests.size > 10000) {
+            const oldestKey = this.requests.keys().next().value;
+            this.requests.delete(oldestKey);
+        }
+
+        return timestamps.length <= this.maxRequests;
+    }
+};
+
 // 创建 HTTP 服务器
 const server = http.createServer((req, res) => {
+    // 检查 Host 头是否存在
+    if (!req.headers.host) {
+        res.writeHead(400);
+        res.end('Bad Request: Missing Host header');
+        return;
+    }
+
+    // 限制请求体大小（10MB）
+    const maxBodySize = 10 * 1024 * 1024;
+    const contentLength = parseInt(req.headers['content-length']) || 0;
+    if (contentLength > maxBodySize) {
+        res.writeHead(413, { 'Content-Type': 'text/plain' });
+        res.end('Payload Too Large');
+        return;
+    }
+
+    // 速率限制检查
+    const clientIp = req.socket.remoteAddress || 'unknown';
+    if (!rateLimiter.check(clientIp)) {
+        res.writeHead(429, { 'Content-Type': 'text/plain' });
+        res.end('Too Many Requests');
+        return;
+    }
+
     const url = new URL(req.url, `http://${req.headers.host}`);
     const pathname = url.pathname;
 
@@ -360,7 +454,7 @@ const server = http.createServer((req, res) => {
     // 检查是否通过域名访问
     let host = req.headers.host;
     // 移除端口号
-    if (host.includes(':')) {
+    if (host && host.includes(':')) {
         host = host.split(':')[0];
     }
 
@@ -438,6 +532,15 @@ const server = http.createServer((req, res) => {
     // 静态文件路由
     if (subPath.startsWith('static/')) {
         const filePath = path.join(getSitePath(siteName), subPath);
+        const normalizedPath = path.normalize(filePath);
+        const sitePath = getSitePath(siteName);
+
+        // 防止路径遍历攻击
+        if (!normalizedPath.startsWith(sitePath)) {
+            res.writeHead(403);
+            res.end('Forbidden');
+            return;
+        }
 
         fs.readFile(filePath, (err, data) => {
             if (err) {
@@ -514,6 +617,21 @@ if (addr.startsWith(':')) {
     // 格式: 8080
     port = parseInt(addr);
 }
+
+// 设置服务器超时和限制
+server.maxHeadersCount = 100; // 限制请求头数量
+server.headersTimeout = 60000; // 60秒头超时
+server.requestTimeout = 120000; // 120秒请求超时
+server.timeout = 120000; // 120秒超时
+server.keepAliveTimeout = 5000; // 5秒保持连接超时
+
+// 监听连接事件以设置套接字超时
+server.on('connection', (socket) => {
+    socket.setTimeout(120000); // 120秒套接字超时
+    socket.on('timeout', () => {
+        socket.destroy();
+    });
+});
 
 // 启动服务器
 server.listen(port, host, () => {

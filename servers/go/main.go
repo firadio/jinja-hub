@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/flosch/pongo2/v6"
 )
@@ -40,6 +42,54 @@ type SitesConfig struct {
 }
 
 var domainToSite = make(map[string]string)
+
+// 速率限制器
+type rateLimiter struct {
+	mu          sync.Mutex
+	requests    map[string][]time.Time
+	windowMs    time.Duration
+	maxRequests int
+}
+
+func newRateLimiter() *rateLimiter {
+	return &rateLimiter{
+		requests:    make(map[string][]time.Time),
+		windowMs:    time.Minute,
+		maxRequests: 100,
+	}
+}
+
+func (rl *rateLimiter) check(ip string) bool {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+
+	now := time.Now()
+
+	// 清理旧的时间戳
+	var validTimestamps []time.Time
+	if timestamps, exists := rl.requests[ip]; exists {
+		for _, t := range timestamps {
+			if now.Sub(t) < rl.windowMs {
+				validTimestamps = append(validTimestamps, t)
+			}
+		}
+	}
+
+	validTimestamps = append(validTimestamps, now)
+	rl.requests[ip] = validTimestamps
+
+	// 简单的内存管理
+	if len(rl.requests) > 10000 {
+		for k := range rl.requests {
+			delete(rl.requests, k)
+			break
+		}
+	}
+
+	return len(validTimestamps) <= rl.maxRequests
+}
+
+var limiter = newRateLimiter()
 
 type Config struct {
 	Site struct {
@@ -168,13 +218,37 @@ func main() {
 	// 预加载常用 CDN 文件
 	go prewarmCache()
 
-	if err := http.ListenAndServe(*addr, mux); err != nil {
+	// 创建带超时和限制的服务器
+	srv := &http.Server{
+		Addr:              *addr,
+		Handler:           mux,
+		ReadTimeout:       60 * time.Second,
+		ReadHeaderTimeout: 60 * time.Second,
+		WriteTimeout:      120 * time.Second,
+		IdleTimeout:       120 * time.Second,
+		MaxHeaderBytes:    1 << 20, // 1 MB
+	}
+
+	if err := srv.ListenAndServe(); err != nil {
 		log.Fatal("Failed to start server:", err)
 	}
 }
 
 // handleAllRoutes 处理所有路由
 func handleAllRoutes(w http.ResponseWriter, r *http.Request) {
+	// 限制请求体大小（10MB）
+	r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
+
+	// 速率限制检查
+	clientIP := r.RemoteAddr
+	if colonIndex := strings.LastIndex(clientIP, ":"); colonIndex != -1 {
+		clientIP = clientIP[:colonIndex]
+	}
+	if !limiter.check(clientIP) {
+		http.Error(w, "Too Many Requests", http.StatusTooManyRequests)
+		return
+	}
+
 	// CDN 代理路由
 	if strings.HasPrefix(r.URL.Path, "/cdn/") {
 		handleCDNProxy(w, r)
@@ -569,11 +643,41 @@ func isCompressible(contentType string) bool {
 	return compressibleTypes[strings.TrimSpace(parts[0])]
 }
 
+// 添加 charset 到 Content-Type
+func addCharset(contentType string) string {
+	// 如果已经包含 charset，不重复添加
+	if strings.Contains(contentType, "charset") {
+		return contentType
+	}
+
+	// 对文本类型添加 charset=UTF-8
+	textTypes := []string{"text/", "application/json", "application/javascript", "application/xml"}
+	for _, prefix := range textTypes {
+		if strings.HasPrefix(contentType, prefix) {
+			return contentType + "; charset=UTF-8"
+		}
+	}
+
+	return contentType
+}
+
 // 发送响应（带 gzip 压缩支持）
 func sendResponse(w http.ResponseWriter, r *http.Request, contentType string, data []byte) {
+	// 添加 charset
+	fullContentType := addCharset(contentType)
+
+	// 限制压缩内容大小（5MB），防止压缩炸弹攻击
+	maxCompressSize := 5 * 1024 * 1024
+	if len(data) > maxCompressSize {
+		w.Header().Set("Content-Type", fullContentType)
+		w.WriteHeader(http.StatusOK)
+		w.Write(data)
+		return
+	}
+
 	// 如果内容小于 1KB 或不可压缩，直接发送
 	if len(data) < 1024 || !isCompressible(contentType) || !supportsGzip(r) {
-		w.Header().Set("Content-Type", contentType)
+		w.Header().Set("Content-Type", fullContentType)
 		w.WriteHeader(http.StatusOK)
 		w.Write(data)
 		return
@@ -584,7 +688,7 @@ func sendResponse(w http.ResponseWriter, r *http.Request, contentType string, da
 	gzipWriter := gzip.NewWriter(&buf)
 	if _, err := gzipWriter.Write(data); err != nil {
 		// 压缩失败，发送原始内容
-		w.Header().Set("Content-Type", contentType)
+		w.Header().Set("Content-Type", fullContentType)
 		w.WriteHeader(http.StatusOK)
 		w.Write(data)
 		return
@@ -592,7 +696,7 @@ func sendResponse(w http.ResponseWriter, r *http.Request, contentType string, da
 	gzipWriter.Close()
 
 	// 发送压缩后的内容
-	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("Content-Type", fullContentType)
 	w.Header().Set("Content-Encoding", "gzip")
 	w.WriteHeader(http.StatusOK)
 	w.Write(buf.Bytes())
@@ -600,6 +704,26 @@ func sendResponse(w http.ResponseWriter, r *http.Request, contentType string, da
 
 // 发送静态文件（带 gzip 压缩支持）
 func serveStaticFile(w http.ResponseWriter, r *http.Request, filePath string) {
+	// 规范化路径并检查是否在允许的目录内（防止路径遍历攻击）
+	normalizedPath, err := filepath.Abs(filePath)
+	if err != nil {
+		http.Error(w, "Invalid path", http.StatusBadRequest)
+		return
+	}
+
+	// 获取基础路径
+	basePath, err := filepath.Abs("../../sites")
+	if err != nil {
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+
+	// 检查路径是否在允许的目录内
+	if !strings.HasPrefix(normalizedPath, basePath) {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
 	// 读取文件内容
 	data, err := os.ReadFile(filePath)
 	if err != nil {

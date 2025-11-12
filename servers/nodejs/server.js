@@ -201,14 +201,14 @@ function handleDomainSiteRoute(req, res, siteName, pathname) {
     // 页面路由
     if (pathname === '' || pathname === '/' || pathname === '/index.html') {
         // 站点首页 - 使用域名模式，base_path 为 /
-        renderSitePageWithBasePath(res, siteName, 'login', '/');
+        renderSitePageWithBasePath(req, res, siteName, 'login', '/');
         return;
     }
 
     // 匹配 *.html 页面
     if (/^\/([a-z_]+)\.html$/.test(pathname)) {
         const pageName = pathname.slice(1, -5);  // 移除 / 和 .html
-        renderSitePageWithBasePath(res, siteName, pageName, '/');
+        renderSitePageWithBasePath(req, res, siteName, pageName, '/');
         return;
     }
 
@@ -220,7 +220,7 @@ function handleDomainSiteRoute(req, res, siteName, pathname) {
 /**
  * 渲染站点页面（带基础路径）
  */
-function renderSitePageWithBasePath(res, siteName, pageName, basePath) {
+function renderSitePageWithBasePath(req, res, siteName, pageName, basePath) {
     // 检查站点是否存在
     if (!sitesConfig.sites[siteName]) {
         res.writeHead(404);
@@ -342,8 +342,8 @@ function renderSitePageWithBasePath(res, siteName, pageName, basePath) {
 /**
  * 渲染站点页面 (使用路径模式)
  */
-function renderSitePage(res, siteName, pageName) {
-    renderSitePageWithBasePath(res, siteName, pageName, `/${siteName}`);
+function renderSitePage(req, res, siteName, pageName) {
+    renderSitePageWithBasePath(req, res, siteName, pageName, `/${siteName}`);
 }
 
 // 创建 HTTP 服务器
@@ -471,14 +471,14 @@ const server = http.createServer((req, res) => {
     // 页面路由
     if (subPath === '' || subPath === 'index.html') {
         // 站点首页
-        renderSitePage(res, siteName, 'login');
+        renderSitePage(req, res, siteName, 'login');
         return;
     }
 
     // 匹配 *.html 页面
     if (/^([a-z_]+)\.html$/.test(subPath)) {
         const pageName = subPath.slice(0, -5);  // 移除 .html
-        renderSitePage(res, siteName, pageName);
+        renderSitePage(req, res, siteName, pageName);
         return;
     }
 

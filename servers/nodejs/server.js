@@ -6,6 +6,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
 const nunjucks = require('nunjucks');
 const { handleCDNProxy, prewarmCache } = require('./cdn-utils');
 
@@ -79,6 +80,71 @@ const mimeTypes = {
     '.svg': 'image/svg+xml',
 };
 
+// 可压缩的 MIME 类型
+const compressibleTypes = new Set([
+    'text/html',
+    'text/css',
+    'application/javascript',
+    'application/json',
+    'image/svg+xml',
+    'text/plain',
+    'application/xml',
+    'text/xml',
+]);
+
+/**
+ * 检查客户端是否支持 gzip
+ */
+function supportsGzip(req) {
+    const acceptEncoding = req.headers['accept-encoding'] || '';
+    return acceptEncoding.includes('gzip');
+}
+
+/**
+ * 检查内容类型是否可压缩
+ */
+function isCompressible(contentType) {
+    return compressibleTypes.has(contentType.split(';')[0]);
+}
+
+/**
+ * 发送响应（带 gzip 压缩支持）
+ */
+function sendResponse(res, statusCode, contentType, content, req) {
+    // 对于字符串内容，转换为 Buffer
+    const buffer = Buffer.isBuffer(content) ? content : Buffer.from(content);
+
+    // 如果内容小于 1KB 或不可压缩，直接发送
+    if (buffer.length < 1024 || !isCompressible(contentType) || !supportsGzip(req)) {
+        res.writeHead(statusCode, {
+            'Content-Type': contentType,
+            'Content-Length': buffer.length,
+        });
+        res.end(buffer);
+        return;
+    }
+
+    // 使用 gzip 压缩
+    zlib.gzip(buffer, (err, compressed) => {
+        if (err) {
+            // 压缩失败，发送原始内容
+            res.writeHead(statusCode, {
+                'Content-Type': contentType,
+                'Content-Length': buffer.length,
+            });
+            res.end(buffer);
+            return;
+        }
+
+        res.writeHead(statusCode, {
+            'Content-Type': contentType,
+            'Content-Encoding': 'gzip',
+            'Content-Length': compressed.length,
+        });
+        res.end(compressed);
+    });
+}
+
 /**
  * 处理域名直接访问站点的路由
  */
@@ -103,7 +169,7 @@ function handleDomainSiteRoute(req, res, siteName, pathname) {
     if (pathname.startsWith('/static/')) {
         const filePath = path.join(getSitePath(siteName), pathname);
 
-        fs.access(filePath, fs.constants.R_OK, (err) => {
+        fs.readFile(filePath, (err, data) => {
             if (err) {
                 res.writeHead(404);
                 res.end('404 Not Found');
@@ -113,8 +179,7 @@ function handleDomainSiteRoute(req, res, siteName, pathname) {
             const ext = path.extname(filePath);
             const contentType = mimeTypes[ext] || 'application/octet-stream';
 
-            res.writeHead(200, { 'Content-Type': contentType });
-            fs.createReadStream(filePath).pipe(res);
+            sendResponse(res, 200, contentType, data, req);
         });
         return;
     }
@@ -266,8 +331,7 @@ function renderSitePageWithBasePath(res, siteName, pageName, basePath) {
             base_path: basePath
         });
 
-        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-        res.end(html);
+        sendResponse(res, 200, 'text/html; charset=utf-8', html, req);
     } catch (err) {
         console.error('Render error:', err);
         res.writeHead(500);
@@ -344,8 +408,7 @@ const server = http.createServer((req, res) => {
                 sites: sitesArray
             });
 
-            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-            res.end(html);
+            sendResponse(res, 200, 'text/html; charset=utf-8', html, req);
         } catch (err) {
             console.error('Render error:', err);
             res.writeHead(500);
@@ -376,7 +439,7 @@ const server = http.createServer((req, res) => {
     if (subPath.startsWith('static/')) {
         const filePath = path.join(getSitePath(siteName), subPath);
 
-        fs.access(filePath, fs.constants.R_OK, (err) => {
+        fs.readFile(filePath, (err, data) => {
             if (err) {
                 res.writeHead(404);
                 res.end('404 Not Found');
@@ -386,8 +449,7 @@ const server = http.createServer((req, res) => {
             const ext = path.extname(filePath);
             const contentType = mimeTypes[ext] || 'application/octet-stream';
 
-            res.writeHead(200, { 'Content-Type': contentType });
-            fs.createReadStream(filePath).pipe(res);
+            sendResponse(res, 200, contentType, data, req);
         });
         return;
     }

@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"flag"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -226,7 +229,7 @@ func handleAllRoutes(w http.ResponseWriter, r *http.Request) {
 	// 静态文件路由
 	if len(parts) >= 2 && parts[1] == "static" {
 		staticPath := filepath.Join(getSitePath(siteName), strings.Join(parts[1:], "/"))
-		http.ServeFile(w, r, staticPath)
+		serveStaticFile(w, r, staticPath)
 		return
 	}
 
@@ -267,7 +270,7 @@ func handleDomainSiteRoute(w http.ResponseWriter, r *http.Request, siteName stri
 	// 静态文件路由
 	if strings.HasPrefix(path, "/static/") {
 		staticPath := filepath.Join(getSitePath(siteName), strings.TrimPrefix(path, "/"))
-		http.ServeFile(w, r, staticPath)
+		serveStaticFile(w, r, staticPath)
 		return
 	}
 
@@ -375,10 +378,8 @@ func renderHomePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 返回 HTML
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(html))
+	// 返回 HTML (带 gzip 压缩)
+	sendResponse(w, r, "text/html; charset=utf-8", []byte(html))
 }
 
 // renderSitePage 渲染站点页面 (使用路径模式)
@@ -540,8 +541,91 @@ func renderSitePageWithBasePath(w http.ResponseWriter, r *http.Request, siteName
 		return
 	}
 
-	// 返回 HTML
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	// 返回 HTML (带 gzip 压缩)
+	sendResponse(w, r, "text/html; charset=utf-8", []byte(html))
+}
+
+// 可压缩的 MIME 类型
+var compressibleTypes = map[string]bool{
+	"text/html":              true,
+	"text/css":               true,
+	"application/javascript": true,
+	"application/json":       true,
+	"image/svg+xml":          true,
+	"text/plain":             true,
+	"application/xml":        true,
+	"text/xml":               true,
+}
+
+// 检查客户端是否支持 gzip
+func supportsGzip(r *http.Request) bool {
+	acceptEncoding := r.Header.Get("Accept-Encoding")
+	return strings.Contains(acceptEncoding, "gzip")
+}
+
+// 检查内容类型是否可压缩
+func isCompressible(contentType string) bool {
+	// 移除参数部分 (如 charset)
+	parts := strings.Split(contentType, ";")
+	return compressibleTypes[strings.TrimSpace(parts[0])]
+}
+
+// 发送响应（带 gzip 压缩支持）
+func sendResponse(w http.ResponseWriter, r *http.Request, contentType string, data []byte) {
+	// 如果内容小于 1KB 或不可压缩，直接发送
+	if len(data) < 1024 || !isCompressible(contentType) || !supportsGzip(r) {
+		w.Header().Set("Content-Type", contentType)
+		w.WriteHeader(http.StatusOK)
+		w.Write(data)
+		return
+	}
+
+	// 使用 gzip 压缩
+	var buf bytes.Buffer
+	gzipWriter := gzip.NewWriter(&buf)
+	if _, err := gzipWriter.Write(data); err != nil {
+		// 压缩失败，发送原始内容
+		w.Header().Set("Content-Type", contentType)
+		w.WriteHeader(http.StatusOK)
+		w.Write(data)
+		return
+	}
+	gzipWriter.Close()
+
+	// 发送压缩后的内容
+	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("Content-Encoding", "gzip")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(html))
+	w.Write(buf.Bytes())
+}
+
+// 发送静态文件（带 gzip 压缩支持）
+func serveStaticFile(w http.ResponseWriter, r *http.Request, filePath string) {
+	// 读取文件内容
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	// 确定 MIME 类型
+	ext := filepath.Ext(filePath)
+	mimeTypes := map[string]string{
+		".html": "text/html",
+		".css":  "text/css",
+		".js":   "application/javascript",
+		".json": "application/json",
+		".png":  "image/png",
+		".jpg":  "image/jpeg",
+		".jpeg": "image/jpeg",
+		".gif":  "image/gif",
+		".svg":  "image/svg+xml",
+	}
+	contentType := mimeTypes[ext]
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+
+	// 发送响应（自动处理压缩）
+	sendResponse(w, r, contentType, data)
 }

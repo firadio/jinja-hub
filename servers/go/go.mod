@@ -1,4 +1,4 @@
-module github.com/firadio/cloud-platform-manager
+module github.com/firadio/jinja-hub
 
 go 1.21
 

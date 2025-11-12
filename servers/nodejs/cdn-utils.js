@@ -7,94 +7,9 @@ const https = require('https');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const zlib = require('zlib');
 
 // CDN 缓存目录
 const CDN_CACHE_DIR = path.join(__dirname, '..', '..', 'sites', '_static', 'cdn');
-
-// 可压缩的 MIME 类型
-const compressibleTypes = new Set([
-    'text/html',
-    'text/css',
-    'application/javascript',
-    'application/json',
-    'image/svg+xml',
-    'text/plain',
-]);
-
-/**
- * 检查客户端是否支持 gzip
- */
-function supportsGzip(req) {
-    const acceptEncoding = req.headers['accept-encoding'] || '';
-    return acceptEncoding.includes('gzip');
-}
-
-/**
- * 检查内容类型是否可压缩
- */
-function isCompressible(contentType) {
-    return compressibleTypes.has(contentType.split(';')[0]);
-}
-
-/**
- * 添加 charset 到 Content-Type
- */
-function addCharset(contentType) {
-    // 如果已经包含 charset，不重复添加
-    if (contentType.includes('charset')) {
-        return contentType;
-    }
-
-    // 对文本类型添加 charset=UTF-8
-    const textTypes = ['text/', 'application/json', 'application/javascript', 'application/xml'];
-    if (textTypes.some(type => contentType.startsWith(type))) {
-        return `${contentType}; charset=UTF-8`;
-    }
-
-    return contentType;
-}
-
-/**
- * 发送响应（带 gzip 压缩支持）
- */
-function sendCompressedResponse(res, req, contentType, buffer) {
-    // 添加 charset
-    const fullContentType = addCharset(contentType);
-
-    // 如果内容小于 1KB 或不可压缩，直接发送
-    if (buffer.length < 1024 || !isCompressible(contentType) || !supportsGzip(req)) {
-        res.writeHead(200, {
-            'Content-Type': fullContentType,
-            'Content-Length': buffer.length,
-            'Cache-Control': 'public, max-age=31536000',
-        });
-        res.end(buffer);
-        return;
-    }
-
-    // 使用 gzip 压缩
-    zlib.gzip(buffer, (err, compressed) => {
-        if (err) {
-            // 压缩失败，发送原始内容
-            res.writeHead(200, {
-                'Content-Type': fullContentType,
-                'Content-Length': buffer.length,
-                'Cache-Control': 'public, max-age=31536000',
-            });
-            res.end(buffer);
-            return;
-        }
-
-        res.writeHead(200, {
-            'Content-Type': fullContentType,
-            'Content-Encoding': 'gzip',
-            'Content-Length': compressed.length,
-            'Cache-Control': 'public, max-age=31536000',
-        });
-        res.end(compressed);
-    });
-}
 
 // 确保缓存目录存在
 function ensureCacheDir() {
@@ -165,10 +80,12 @@ function downloadCDNFile(url, localPath) {
 
 /**
  * 处理 CDN 代理请求
+ * 返回文件数据和内容类型，由调用者负责发送响应
  * @param {http.IncomingMessage} req
  * @param {http.ServerResponse} res
+ * @param {Function} sendResponse - 统一的响应发送函数
  */
-function handleCDNProxy(req, res) {
+function handleCDNProxy(req, res, sendResponse) {
     // 解析 URL: /cdn/npm/daisyui@4.12.24/dist/full.min.css
     //         or: /cdn/tailwindcss/tailwind.js
     const urlPath = req.url.replace(/^\/cdn\//, '');
@@ -213,7 +130,9 @@ function handleCDNProxy(req, res) {
                 res.end('Failed to read cache file');
                 return;
             }
-            sendCompressedResponse(res, req, contentType, data);
+            // 使用统一的响应发送函数，添加 CDN 缓存头
+            res.setHeader('Cache-Control', 'public, max-age=31536000');
+            sendResponse(res, 200, contentType, data, req);
         });
         return;
     }
@@ -227,7 +146,9 @@ function handleCDNProxy(req, res) {
                     res.end('Failed to read downloaded file');
                     return;
                 }
-                sendCompressedResponse(res, req, contentType, data);
+                // 使用统一的响应发送函数，添加 CDN 缓存头
+                res.setHeader('Cache-Control', 'public, max-age=31536000');
+                sendResponse(res, 200, contentType, data, req);
             });
         })
         .catch((err) => {

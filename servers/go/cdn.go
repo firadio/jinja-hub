@@ -1,8 +1,6 @@
 package main
 
 import (
-	"bytes"
-	"compress/gzip"
 	"fmt"
 	"io"
 	"log"
@@ -174,37 +172,10 @@ func prewarmCache() {
 	log.Println("CDN cache prewarm complete")
 }
 
-// 发送 CDN 响应（带 gzip 压缩和缓存头）
+// 发送 CDN 响应（使用统一的响应函数）
 func sendCDNResponse(w http.ResponseWriter, r *http.Request, contentType string, data []byte) {
-	// 添加 charset
-	fullContentType := addCharset(contentType)
-
-	// 如果内容小于 1KB 或不可压缩，直接发送
-	if len(data) < 1024 || !isCompressible(contentType) || !supportsGzip(r) {
-		w.Header().Set("Content-Type", fullContentType)
-		w.Header().Set("Cache-Control", "public, max-age=31536000")
-		w.WriteHeader(http.StatusOK)
-		w.Write(data)
-		return
-	}
-
-	// 使用 gzip 压缩
-	var buf bytes.Buffer
-	gzipWriter := gzip.NewWriter(&buf)
-	if _, err := gzipWriter.Write(data); err != nil {
-		// 压缩失败，发送原始内容
-		w.Header().Set("Content-Type", fullContentType)
-		w.Header().Set("Cache-Control", "public, max-age=31536000")
-		w.WriteHeader(http.StatusOK)
-		w.Write(data)
-		return
-	}
-	gzipWriter.Close()
-
-	// 发送压缩后的内容
-	w.Header().Set("Content-Type", fullContentType)
-	w.Header().Set("Content-Encoding", "gzip")
+	// 添加 CDN 缓存头
 	w.Header().Set("Cache-Control", "public, max-age=31536000")
-	w.WriteHeader(http.StatusOK)
-	w.Write(buf.Bytes())
+	// 使用统一的 sendResponse 函数处理压缩和流量统计
+	sendResponse(w, r, contentType, data)
 }

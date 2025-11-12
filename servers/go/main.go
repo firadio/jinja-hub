@@ -43,19 +43,29 @@ type SitesConfig struct {
 
 var domainToSite = make(map[string]string)
 
+// 流量记录
+type trafficRecord struct {
+	timestamp time.Time
+	bytes     int64
+}
+
 // 速率限制器
 type rateLimiter struct {
 	mu          sync.Mutex
 	requests    map[string][]time.Time
+	traffic     map[string][]trafficRecord
 	windowMs    time.Duration
 	maxRequests int
+	maxBytes    int64 // 每分钟最大字节数
 }
 
 func newRateLimiter() *rateLimiter {
 	return &rateLimiter{
 		requests:    make(map[string][]time.Time),
+		traffic:     make(map[string][]trafficRecord),
 		windowMs:    time.Minute,
-		maxRequests: 100,
+		maxRequests: 1000,               // 每分钟1000个请求（静态资源服务器）
+		maxBytes:    100 * 1024 * 1024, // 每分钟100MB
 	}
 }
 
@@ -75,6 +85,11 @@ func (rl *rateLimiter) check(ip string) bool {
 		}
 	}
 
+	// 先检查是否超过请求数限制，再添加时间戳
+	if len(validTimestamps) >= rl.maxRequests {
+		return false
+	}
+
 	validTimestamps = append(validTimestamps, now)
 	rl.requests[ip] = validTimestamps
 
@@ -86,7 +101,53 @@ func (rl *rateLimiter) check(ip string) bool {
 		}
 	}
 
-	return len(validTimestamps) <= rl.maxRequests
+	return true
+}
+
+func (rl *rateLimiter) checkTraffic(ip string, bytes int64) bool {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+
+	now := time.Now()
+
+	// 清理旧的流量记录
+	var validRecords []trafficRecord
+	var totalBytes int64
+	if records, exists := rl.traffic[ip]; exists {
+		for _, r := range records {
+			if now.Sub(r.timestamp) < rl.windowMs {
+				validRecords = append(validRecords, r)
+				totalBytes += r.bytes
+			}
+		}
+	}
+
+	// 检查是否超过流量限制
+	if totalBytes+bytes > rl.maxBytes {
+		log.Printf("[Traffic] IP: %s, Current: %d bytes, Request: %d bytes, Limit: %d bytes - BLOCKED",
+			ip, totalBytes, bytes, rl.maxBytes)
+		return false
+	}
+
+	// 添加新的流量记录
+	validRecords = append(validRecords, trafficRecord{
+		timestamp: now,
+		bytes:     bytes,
+	})
+	rl.traffic[ip] = validRecords
+
+	log.Printf("[Traffic] IP: %s, Current: %d bytes, Request: %d bytes, Total: %d bytes, Limit: %d bytes",
+		ip, totalBytes, bytes, totalBytes+bytes, rl.maxBytes)
+
+	// 简单的内存管理
+	if len(rl.traffic) > 10000 {
+		for k := range rl.traffic {
+			delete(rl.traffic, k)
+			break
+		}
+	}
+
+	return true
 }
 
 var limiter = newRateLimiter()
@@ -661,12 +722,23 @@ func addCharset(contentType string) string {
 
 // 发送响应（带 gzip 压缩支持）
 func sendResponse(w http.ResponseWriter, r *http.Request, contentType string, data []byte) {
+	// 获取客户端IP进行流量检查
+	clientIP := r.RemoteAddr
+	if colonIndex := strings.LastIndex(clientIP, ":"); colonIndex != -1 {
+		clientIP = clientIP[:colonIndex]
+	}
+
 	// 添加 charset
 	fullContentType := addCharset(contentType)
 
 	// 限制压缩内容大小（5MB），防止压缩炸弹攻击
 	maxCompressSize := 5 * 1024 * 1024
 	if len(data) > maxCompressSize {
+		// 检查流量限制
+		if !limiter.checkTraffic(clientIP, int64(len(data))) {
+			http.Error(w, "Bandwidth Limit Exceeded", http.StatusTooManyRequests)
+			return
+		}
 		w.Header().Set("Content-Type", fullContentType)
 		w.WriteHeader(http.StatusOK)
 		w.Write(data)
@@ -675,6 +747,11 @@ func sendResponse(w http.ResponseWriter, r *http.Request, contentType string, da
 
 	// 如果内容小于 1KB 或不可压缩，直接发送
 	if len(data) < 1024 || !isCompressible(contentType) || !supportsGzip(r) {
+		// 检查流量限制
+		if !limiter.checkTraffic(clientIP, int64(len(data))) {
+			http.Error(w, "Bandwidth Limit Exceeded", http.StatusTooManyRequests)
+			return
+		}
 		w.Header().Set("Content-Type", fullContentType)
 		w.WriteHeader(http.StatusOK)
 		w.Write(data)
@@ -686,12 +763,22 @@ func sendResponse(w http.ResponseWriter, r *http.Request, contentType string, da
 	gzipWriter := gzip.NewWriter(&buf)
 	if _, err := gzipWriter.Write(data); err != nil {
 		// 压缩失败，发送原始内容
+		if !limiter.checkTraffic(clientIP, int64(len(data))) {
+			http.Error(w, "Bandwidth Limit Exceeded", http.StatusTooManyRequests)
+			return
+		}
 		w.Header().Set("Content-Type", fullContentType)
 		w.WriteHeader(http.StatusOK)
 		w.Write(data)
 		return
 	}
 	gzipWriter.Close()
+
+	// 检查流量限制（使用压缩后的大小）
+	if !limiter.checkTraffic(clientIP, int64(buf.Len())) {
+		http.Error(w, "Bandwidth Limit Exceeded", http.StatusTooManyRequests)
+		return
+	}
 
 	// 发送压缩后的内容
 	w.Header().Set("Content-Type", fullContentType)

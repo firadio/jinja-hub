@@ -129,6 +129,9 @@ function addCharset(contentType) {
  * 发送响应（带 gzip 压缩支持）
  */
 function sendResponse(res, statusCode, contentType, content, req) {
+    // 获取客户端IP进行流量检查
+    const clientIp = req.socket.remoteAddress || 'unknown';
+
     // 添加 charset
     const fullContentType = addCharset(contentType);
 
@@ -138,6 +141,12 @@ function sendResponse(res, statusCode, contentType, content, req) {
     // 限制压缩内容大小（5MB），防止压缩炸弹攻击
     const maxCompressSize = 5 * 1024 * 1024;
     if (buffer.length > maxCompressSize) {
+        // 检查流量限制
+        if (!rateLimiter.checkTraffic(clientIp, buffer.length)) {
+            res.writeHead(429, { 'Content-Type': 'text/plain' });
+            res.end('Bandwidth Limit Exceeded');
+            return;
+        }
         res.writeHead(statusCode, {
             'Content-Type': fullContentType,
             'Content-Length': buffer.length,
@@ -148,6 +157,12 @@ function sendResponse(res, statusCode, contentType, content, req) {
 
     // 如果内容小于 1KB 或不可压缩，直接发送
     if (buffer.length < 1024 || !isCompressible(contentType) || !supportsGzip(req)) {
+        // 检查流量限制
+        if (!rateLimiter.checkTraffic(clientIp, buffer.length)) {
+            res.writeHead(429, { 'Content-Type': 'text/plain' });
+            res.end('Bandwidth Limit Exceeded');
+            return;
+        }
         res.writeHead(statusCode, {
             'Content-Type': fullContentType,
             'Content-Length': buffer.length,
@@ -160,11 +175,23 @@ function sendResponse(res, statusCode, contentType, content, req) {
     zlib.gzip(buffer, (err, compressed) => {
         if (err) {
             // 压缩失败，发送原始内容
+            if (!rateLimiter.checkTraffic(clientIp, buffer.length)) {
+                res.writeHead(429, { 'Content-Type': 'text/plain' });
+                res.end('Bandwidth Limit Exceeded');
+                return;
+            }
             res.writeHead(statusCode, {
                 'Content-Type': fullContentType,
                 'Content-Length': buffer.length,
             });
             res.end(buffer);
+            return;
+        }
+
+        // 检查流量限制（使用压缩后的大小）
+        if (!rateLimiter.checkTraffic(clientIp, compressed.length)) {
+            res.writeHead(429, { 'Content-Type': 'text/plain' });
+            res.end('Bandwidth Limit Exceeded');
             return;
         }
 
@@ -390,8 +417,10 @@ function renderSitePage(req, res, siteName, pageName) {
 // 简单的内存缓存型速率限制器
 const rateLimiter = {
     requests: new Map(),
+    traffic: new Map(),
     windowMs: 60000, // 1分钟窗口
-    maxRequests: 100, // 每分钟最多100个请求
+    maxRequests: 1000, // 每分钟最多1000个请求（静态资源服务器）
+    maxBytes: 100 * 1024 * 1024, // 每分钟100MB
 
     check(ip) {
         const now = Date.now();
@@ -403,6 +432,12 @@ const rateLimiter = {
         }
 
         const timestamps = this.requests.get(key).filter(t => now - t < this.windowMs);
+
+        // 先检查是否超过限制，再添加时间戳
+        if (timestamps.length >= this.maxRequests) {
+            return false;
+        }
+
         timestamps.push(now);
         this.requests.set(key, timestamps);
 
@@ -412,7 +447,42 @@ const rateLimiter = {
             this.requests.delete(oldestKey);
         }
 
-        return timestamps.length <= this.maxRequests;
+        return true;
+    },
+
+    checkTraffic(ip, bytes) {
+        const now = Date.now();
+        const key = ip;
+
+        if (!this.traffic.has(key)) {
+            this.traffic.set(key, [{ timestamp: now, bytes }]);
+            console.log(`[Traffic] IP: ${ip}, Current: 0 bytes, Request: ${bytes} bytes, Total: ${bytes} bytes, Limit: ${this.maxBytes} bytes`);
+            return true;
+        }
+
+        // 清理旧的流量记录并计算总流量
+        const records = this.traffic.get(key).filter(r => now - r.timestamp < this.windowMs);
+        const totalBytes = records.reduce((sum, r) => sum + r.bytes, 0);
+
+        // 检查是否超过流量限制
+        if (totalBytes + bytes > this.maxBytes) {
+            console.log(`[Traffic] IP: ${ip}, Current: ${totalBytes} bytes, Request: ${bytes} bytes, Limit: ${this.maxBytes} bytes - BLOCKED`);
+            return false;
+        }
+
+        // 添加新的流量记录
+        records.push({ timestamp: now, bytes });
+        this.traffic.set(key, records);
+
+        console.log(`[Traffic] IP: ${ip}, Current: ${totalBytes} bytes, Request: ${bytes} bytes, Total: ${totalBytes + bytes} bytes, Limit: ${this.maxBytes} bytes`);
+
+        // 清理旧数据（简单的内存管理）
+        if (this.traffic.size > 10000) {
+            const oldestKey = this.traffic.keys().next().value;
+            this.traffic.delete(oldestKey);
+        }
+
+        return true;
     }
 };
 
@@ -447,7 +517,7 @@ const server = http.createServer((req, res) => {
 
     // CDN 代理路由
     if (pathname.startsWith('/cdn/')) {
-        handleCDNProxy(req, res);
+        handleCDNProxy(req, res, sendResponse);
         return;
     }
 

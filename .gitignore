@@ -50,3 +50,6 @@ __pycache__/
 *.pyo
 venv/
 .venv/
+
+# CDN cache (automatically downloaded files)
+sites/_static/cdn/

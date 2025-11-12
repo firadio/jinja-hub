@@ -7,9 +7,73 @@ const https = require('https');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
 
 // CDN 缓存目录
 const CDN_CACHE_DIR = path.join(__dirname, '..', '..', 'sites', '_static', 'cdn');
+
+// 可压缩的 MIME 类型
+const compressibleTypes = new Set([
+    'text/html',
+    'text/css',
+    'application/javascript',
+    'application/json',
+    'image/svg+xml',
+    'text/plain',
+]);
+
+/**
+ * 检查客户端是否支持 gzip
+ */
+function supportsGzip(req) {
+    const acceptEncoding = req.headers['accept-encoding'] || '';
+    return acceptEncoding.includes('gzip');
+}
+
+/**
+ * 检查内容类型是否可压缩
+ */
+function isCompressible(contentType) {
+    return compressibleTypes.has(contentType.split(';')[0]);
+}
+
+/**
+ * 发送响应（带 gzip 压缩支持）
+ */
+function sendCompressedResponse(res, req, contentType, buffer) {
+    // 如果内容小于 1KB 或不可压缩，直接发送
+    if (buffer.length < 1024 || !isCompressible(contentType) || !supportsGzip(req)) {
+        res.writeHead(200, {
+            'Content-Type': contentType,
+            'Content-Length': buffer.length,
+            'Cache-Control': 'public, max-age=31536000',
+        });
+        res.end(buffer);
+        return;
+    }
+
+    // 使用 gzip 压缩
+    zlib.gzip(buffer, (err, compressed) => {
+        if (err) {
+            // 压缩失败，发送原始内容
+            res.writeHead(200, {
+                'Content-Type': contentType,
+                'Content-Length': buffer.length,
+                'Cache-Control': 'public, max-age=31536000',
+            });
+            res.end(buffer);
+            return;
+        }
+
+        res.writeHead(200, {
+            'Content-Type': contentType,
+            'Content-Encoding': 'gzip',
+            'Content-Length': compressed.length,
+            'Cache-Control': 'public, max-age=31536000',
+        });
+        res.end(compressed);
+    });
+}
 
 // 确保缓存目录存在
 function ensureCacheDir() {
@@ -122,22 +186,28 @@ function handleCDNProxy(req, res) {
     // 尝试从缓存提供文件
     const fullLocalPath = path.join(CDN_CACHE_DIR, localPath);
     if (fs.existsSync(fullLocalPath)) {
-        res.writeHead(200, {
-            'Content-Type': contentType,
-            'Cache-Control': 'public, max-age=31536000', // 1年缓存
+        fs.readFile(fullLocalPath, (err, data) => {
+            if (err) {
+                res.writeHead(500);
+                res.end('Failed to read cache file');
+                return;
+            }
+            sendCompressedResponse(res, req, contentType, data);
         });
-        fs.createReadStream(fullLocalPath).pipe(res);
         return;
     }
 
     // 下载并提供文件
     downloadCDNFile(cdnUrl, localPath)
         .then((localFile) => {
-            res.writeHead(200, {
-                'Content-Type': contentType,
-                'Cache-Control': 'public, max-age=31536000',
+            fs.readFile(localFile, (err, data) => {
+                if (err) {
+                    res.writeHead(500);
+                    res.end('Failed to read downloaded file');
+                    return;
+                }
+                sendCompressedResponse(res, req, contentType, data);
             });
-            fs.createReadStream(localFile).pipe(res);
         })
         .catch((err) => {
             console.error(`CDN proxy error: ${err.message}`);

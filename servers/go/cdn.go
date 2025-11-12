@@ -118,9 +118,12 @@ func handleCDNProxy(w http.ResponseWriter, r *http.Request) {
 	// 尝试从缓存提供文件
 	fullLocalPath := filepath.Join(cdnCacheDir, localPath)
 	if _, err := os.Stat(fullLocalPath); err == nil {
-		w.Header().Set("Content-Type", contentType)
-		w.Header().Set("Cache-Control", "public, max-age=31536000") // 1年缓存
-		http.ServeFile(w, r, fullLocalPath)
+		data, err := os.ReadFile(fullLocalPath)
+		if err != nil {
+			http.Error(w, "Failed to read cache file", http.StatusInternalServerError)
+			return
+		}
+		sendCDNResponse(w, r, contentType, data)
 		return
 	}
 
@@ -132,9 +135,12 @@ func handleCDNProxy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", contentType)
-	w.Header().Set("Cache-Control", "public, max-age=31536000")
-	http.ServeFile(w, r, localFile)
+	data, err := os.ReadFile(localFile)
+	if err != nil {
+		http.Error(w, "Failed to read downloaded file", http.StatusInternalServerError)
+		return
+	}
+	sendCDNResponse(w, r, contentType, data)
 }
 
 // 预下载常用 CDN 文件
@@ -164,4 +170,36 @@ func prewarmCache() {
 		}
 	}
 	log.Println("CDN cache prewarm complete")
+}
+
+// 发送 CDN 响应（带 gzip 压缩和缓存头）
+func sendCDNResponse(w http.ResponseWriter, r *http.Request, contentType string, data []byte) {
+	// 如果内容小于 1KB 或不可压缩，直接发送
+	if len(data) < 1024 || !isCompressible(contentType) || !supportsGzip(r) {
+		w.Header().Set("Content-Type", contentType)
+		w.Header().Set("Cache-Control", "public, max-age=31536000")
+		w.WriteHeader(http.StatusOK)
+		w.Write(data)
+		return
+	}
+
+	// 使用 gzip 压缩
+	var buf bytes.Buffer
+	gzipWriter := gzip.NewWriter(&buf)
+	if _, err := gzipWriter.Write(data); err != nil {
+		// 压缩失败，发送原始内容
+		w.Header().Set("Content-Type", contentType)
+		w.Header().Set("Cache-Control", "public, max-age=31536000")
+		w.WriteHeader(http.StatusOK)
+		w.Write(data)
+		return
+	}
+	gzipWriter.Close()
+
+	// 发送压缩后的内容
+	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("Content-Encoding", "gzip")
+	w.Header().Set("Cache-Control", "public, max-age=31536000")
+	w.WriteHeader(http.StatusOK)
+	w.Write(buf.Bytes())
 }

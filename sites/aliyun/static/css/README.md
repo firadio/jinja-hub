@@ -10,7 +10,8 @@ css/
 ├── base/                 # 基础层
 │   ├── variables.css     # CSS 变量定义
 │   ├── reset.css         # Reset 和基础样式
-│   └── utilities.css     # 工具类
+│   ├── utilities.css     # 工具类
+│   └── responsive.css    # 响应式设计 (移动端适配)
 │
 ├── components/           # 组件层 (未来)
 │   ├── button.css
@@ -31,6 +32,7 @@ CSS 模块按以下顺序加载 (在 `main.css` 中定义):
 2. **base/reset.css** - Reset 样式
 3. **base/utilities.css** - 工具类
 4. **style.css** - 原有样式 (临时保留)
+5. **base/responsive.css** - 响应式设计 (最后加载以覆盖前面的样式)
 
 ## CSS 变量使用
 
@@ -194,6 +196,33 @@ localStorage.setItem('theme', 'dark');
    - 避免属性选择器 `[attr~="value"]`
    - 避免后代选择器 `.a .b .c .d`
 
+## 响应式设计
+
+已添加完整的移动端适配支持 (`base/responsive.css`):
+
+### 断点
+
+- **平板设备**: 768px 以下
+- **手机设备**: 480px 以下
+- **触摸设备**: 通过 `@media (hover: none)` 检测
+
+### 主要优化
+
+1. **导航菜单**: 在小屏幕上变为垂直布局
+2. **表格**: 使用横向滚动,保持数据完整性
+3. **表单**: 自动变为单列布局
+4. **按钮组**: 垂直排列,占满宽度
+5. **模态框**: 自适应屏幕大小
+6. **站点切换器**: 在移动端固定在底部
+7. **触摸优化**: 增大可点击区域 (最小 44px)
+
+### 测试建议
+
+- 使用浏览器开发者工具的设备模拟器
+- 测试常见设备: iPhone SE, iPhone 12, iPad, Android 手机
+- 测试横屏和竖屏模式
+- 测试触摸手势: 滚动、点击、长按
+
 ## 未来计划
 
 - [ ] 将 style.css 拆分为组件模块
@@ -202,6 +231,7 @@ localStorage.setItem('theme', 'dark');
 - [ ] 添加暗色主题完整支持
 - [ ] 添加主题切换器组件
 - [ ] 使用 PostCSS 或 Sass 预处理器
+- [x] 添加响应式设计和移动端适配
 
 ## 贡献指南
 

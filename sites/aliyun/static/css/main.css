@@ -10,3 +10,6 @@
 
 /* 组件层 (保留原 style.css 的组件样式) */
 @import 'style.css';
+
+/* 响应式设计 (最后加载,确保可以覆盖前面的样式) */
+@import 'base/responsive.css';

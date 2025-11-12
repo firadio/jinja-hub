@@ -173,52 +173,9 @@
                             <td class="font-mono text-sm" x-text="instance.EipAddress?.IpAddress || '-'"></td>
                             <td class="text-sm" x-text="formatTime(instance.CreationTime)"></td>
                             <td>
-                                <div class="join join-vertical lg:join-horizontal gap-1">
-                                    <!-- 启动/停止 -->
-                                    <template x-if="instance.Status === 'Stopped'">
-                                        <button @click="startInstance(instance)"
-                                                class="btn btn-xs btn-success join-item"
-                                                :disabled="operatingInstanceId === instance.InstanceId">
-                                            <span x-show="operatingInstanceId !== instance.InstanceId">启动</span>
-                                            <span class="loading loading-spinner loading-xs" x-show="operatingInstanceId === instance.InstanceId"></span>
-                                        </button>
-                                    </template>
-                                    <template x-if="instance.Status === 'Running'">
-                                        <button @click="stopInstance(instance)"
-                                                class="btn btn-xs btn-error join-item"
-                                                :disabled="operatingInstanceId === instance.InstanceId">
-                                            <span x-show="operatingInstanceId !== instance.InstanceId">停止</span>
-                                            <span class="loading loading-spinner loading-xs" x-show="operatingInstanceId === instance.InstanceId"></span>
-                                        </button>
-                                    </template>
-
-                                    <!-- 重启 -->
-                                    <template x-if="instance.Status === 'Running'">
-                                        <button @click="rebootInstance(instance)"
-                                                class="btn btn-xs btn-warning join-item"
-                                                :disabled="operatingInstanceId === instance.InstanceId">
-                                            重启
-                                        </button>
-                                    </template>
-
-                                    <!-- 详情 -->
-                                    <button @click="viewDetail(instance)" class="btn btn-xs btn-info join-item">
-                                        详情
-                                    </button>
-
-                                    <!-- 更多操作下拉 -->
-                                    <div class="dropdown dropdown-end">
-                                        <label tabindex="0" class="btn btn-xs btn-ghost join-item">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                                            </svg>
-                                        </label>
-                                        <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-32">
-                                            <li><a @click="openRenameModal(instance)">重命名</a></li>
-                                            <li><a @click="openVnc(instance)">VNC 连接</a></li>
-                                        </ul>
-                                    </div>
-                                </div>
+                                <button @click="openManageModal(instance)" class="btn btn-xs btn-primary">
+                                    管理
+                                </button>
                             </td>
                         </tr>
                     </template>
@@ -262,93 +219,139 @@
             </div>
         </div>
 
-        <!-- 详情模态框 -->
-        <div x-show="showDetailModal" x-cloak class="modal modal-open">
-            <div class="modal-box max-w-4xl">
-                <h3 class="font-bold text-lg mb-4">实例详情</h3>
+        <!-- 管理模态框 -->
+        <div x-show="showManageModal" x-cloak class="modal modal-open">
+            <div class="modal-box max-w-5xl">
+                <h3 class="font-bold text-lg mb-4">实例管理</h3>
                 <template x-if="currentInstance">
-                    <div class="space-y-4">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div class="form-control">
-                                <label class="label"><span class="label-text font-semibold">实例名称</span></label>
-                                <div class="input input-bordered" x-text="currentInstance.InstanceName || '-'"></div>
+                    <div>
+                        <!-- 实例基本信息 -->
+                        <div class="bg-base-200 p-4 rounded-lg mb-6">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div>
+                                    <span class="text-sm text-base-content/60">实例名称：</span>
+                                    <span class="font-semibold" x-text="currentInstance.InstanceName || '-'"></span>
+                                </div>
+                                <div>
+                                    <span class="text-sm text-base-content/60">实例 ID：</span>
+                                    <span class="font-mono text-sm" x-text="currentInstance.InstanceId"></span>
+                                </div>
+                                <div>
+                                    <span class="text-sm text-base-content/60">状态：</span>
+                                    <div class="badge badge-sm"
+                                         :class="{
+                                             'badge-success': formatStatus(currentInstance.Status).class === 'running',
+                                             'badge-error': formatStatus(currentInstance.Status).class === 'stopped',
+                                             'badge-warning': formatStatus(currentInstance.Status).class === 'starting' || formatStatus(currentInstance.Status).class === 'stopping'
+                                         }"
+                                         x-text="formatStatus(currentInstance.Status).text"></div>
+                                </div>
                             </div>
-                            <div class="form-control">
-                                <label class="label"><span class="label-text font-semibold">实例 ID</span></label>
-                                <div class="input input-bordered font-mono text-sm" x-text="currentInstance.InstanceId"></div>
+                        </div>
+
+                        <!-- 操作按钮区 -->
+                        <div class="flex flex-wrap gap-2 mb-6">
+                            <template x-if="currentInstance.Status === 'Stopped'">
+                                <button @click="startInstance(currentInstance)"
+                                        class="btn btn-sm btn-success"
+                                        :disabled="operatingInstanceId === currentInstance.InstanceId">
+                                    <span x-show="operatingInstanceId !== currentInstance.InstanceId">启动实例</span>
+                                    <span class="loading loading-spinner loading-xs" x-show="operatingInstanceId === currentInstance.InstanceId"></span>
+                                </button>
+                            </template>
+                            <template x-if="currentInstance.Status === 'Running'">
+                                <button @click="stopInstance(currentInstance)"
+                                        class="btn btn-sm btn-error"
+                                        :disabled="operatingInstanceId === currentInstance.InstanceId">
+                                    <span x-show="operatingInstanceId !== currentInstance.InstanceId">停止实例</span>
+                                    <span class="loading loading-spinner loading-xs" x-show="operatingInstanceId === currentInstance.InstanceId"></span>
+                                </button>
+                            </template>
+                            <template x-if="currentInstance.Status === 'Running'">
+                                <button @click="rebootInstance(currentInstance)"
+                                        class="btn btn-sm btn-warning"
+                                        :disabled="operatingInstanceId === currentInstance.InstanceId">
+                                    重启实例
+                                </button>
+                            </template>
+                            <button @click="showRenameForm = !showRenameForm" class="btn btn-sm btn-info">
+                                修改名称
+                            </button>
+                            <button @click="openVnc(currentInstance)" class="btn btn-sm btn-secondary">
+                                VNC 连接
+                            </button>
+                        </div>
+
+                        <!-- 重命名表单 -->
+                        <div x-show="showRenameForm" x-cloak class="bg-base-200 p-4 rounded-lg mb-6">
+                            <div class="form-control w-full">
+                                <label class="label">
+                                    <span class="label-text font-semibold">新实例名称</span>
+                                </label>
+                                <div class="join w-full">
+                                    <input type="text"
+                                           class="input input-bordered join-item flex-1"
+                                           x-model="renameForm.instanceName"
+                                           placeholder="请输入实例名称"
+                                           @keyup.enter="saveRename()">
+                                    <button @click="saveRename()" class="btn btn-primary join-item">保存</button>
+                                    <button @click="showRenameForm = false; renameForm.instanceName = currentInstance.InstanceName || ''"
+                                            class="btn btn-ghost join-item">取消</button>
+                                </div>
                             </div>
-                            <div class="form-control">
-                                <label class="label"><span class="label-text font-semibold">状态</span></label>
-                                <div><div class="badge"
-                                     :class="{
-                                         'badge-success': formatStatus(currentInstance.Status).class === 'running',
-                                         'badge-error': formatStatus(currentInstance.Status).class === 'stopped',
-                                         'badge-warning': formatStatus(currentInstance.Status).class === 'starting' || formatStatus(currentInstance.Status).class === 'stopping'
-                                     }"
-                                     x-text="formatStatus(currentInstance.Status).text"></div></div>
+                        </div>
+
+                        <!-- 详细信息 -->
+                        <div class="collapse collapse-arrow bg-base-200 mb-4">
+                            <input type="checkbox" checked />
+                            <div class="collapse-title text-md font-medium">
+                                详细信息
                             </div>
-                            <div class="form-control">
-                                <label class="label"><span class="label-text font-semibold">实例规格</span></label>
-                                <div class="input input-bordered" x-text="currentInstance.InstanceType"></div>
-                            </div>
-                            <div class="form-control">
-                                <label class="label"><span class="label-text font-semibold">私网 IP</span></label>
-                                <div class="input input-bordered font-mono text-sm" x-text="currentInstance.VpcAttributes?.PrivateIpAddress?.IpAddress?.[0] || '-'"></div>
-                            </div>
-                            <div class="form-control">
-                                <label class="label"><span class="label-text font-semibold">公网 IP</span></label>
-                                <div class="input input-bordered font-mono text-sm" x-text="currentInstance.PublicIpAddress?.IpAddress?.[0] || '-'"></div>
-                            </div>
-                            <div class="form-control">
-                                <label class="label"><span class="label-text font-semibold">EIP 地址</span></label>
-                                <div class="input input-bordered font-mono text-sm" x-text="currentInstance.EipAddress?.IpAddress || '-'"></div>
-                            </div>
-                            <div class="form-control">
-                                <label class="label"><span class="label-text font-semibold">CPU</span></label>
-                                <div class="input input-bordered" x-text="`${currentInstance.Cpu} 核`"></div>
-                            </div>
-                            <div class="form-control">
-                                <label class="label"><span class="label-text font-semibold">内存</span></label>
-                                <div class="input input-bordered" x-text="`${currentInstance.Memory / 1024} GB`"></div>
-                            </div>
-                            <div class="form-control">
-                                <label class="label"><span class="label-text font-semibold">操作系统</span></label>
-                                <div class="input input-bordered" x-text="currentInstance.OSName || currentInstance.OSType || '-'"></div>
-                            </div>
-                            <div class="form-control">
-                                <label class="label"><span class="label-text font-semibold">创建时间</span></label>
-                                <div class="input input-bordered" x-text="formatTime(currentInstance.CreationTime)"></div>
-                            </div>
-                            <div class="form-control">
-                                <label class="label"><span class="label-text font-semibold">到期时间</span></label>
-                                <div class="input input-bordered" x-text="formatTime(currentInstance.ExpiredTime)"></div>
+                            <div class="collapse-content">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                                    <div class="form-control">
+                                        <label class="label"><span class="label-text font-semibold">实例规格</span></label>
+                                        <div class="input input-bordered" x-text="currentInstance.InstanceType"></div>
+                                    </div>
+                                    <div class="form-control">
+                                        <label class="label"><span class="label-text font-semibold">CPU</span></label>
+                                        <div class="input input-bordered" x-text="`${currentInstance.Cpu} 核`"></div>
+                                    </div>
+                                    <div class="form-control">
+                                        <label class="label"><span class="label-text font-semibold">内存</span></label>
+                                        <div class="input input-bordered" x-text="`${currentInstance.Memory / 1024} GB`"></div>
+                                    </div>
+                                    <div class="form-control">
+                                        <label class="label"><span class="label-text font-semibold">操作系统</span></label>
+                                        <div class="input input-bordered" x-text="currentInstance.OSName || currentInstance.OSType || '-'"></div>
+                                    </div>
+                                    <div class="form-control">
+                                        <label class="label"><span class="label-text font-semibold">私网 IP</span></label>
+                                        <div class="input input-bordered font-mono text-sm" x-text="currentInstance.VpcAttributes?.PrivateIpAddress?.IpAddress?.[0] || '-'"></div>
+                                    </div>
+                                    <div class="form-control">
+                                        <label class="label"><span class="label-text font-semibold">公网 IP</span></label>
+                                        <div class="input input-bordered font-mono text-sm" x-text="currentInstance.PublicIpAddress?.IpAddress?.[0] || '-'"></div>
+                                    </div>
+                                    <div class="form-control">
+                                        <label class="label"><span class="label-text font-semibold">EIP 地址</span></label>
+                                        <div class="input input-bordered font-mono text-sm" x-text="currentInstance.EipAddress?.IpAddress || '-'"></div>
+                                    </div>
+                                    <div class="form-control">
+                                        <label class="label"><span class="label-text font-semibold">创建时间</span></label>
+                                        <div class="input input-bordered" x-text="formatTime(currentInstance.CreationTime)"></div>
+                                    </div>
+                                    <div class="form-control">
+                                        <label class="label"><span class="label-text font-semibold">到期时间</span></label>
+                                        <div class="input input-bordered" x-text="formatTime(currentInstance.ExpiredTime)"></div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </template>
                 <div class="modal-action">
-                    <button @click="closeDetailModal()" class="btn">关闭</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 重命名模态框 -->
-        <div x-show="showRenameModal" x-cloak class="modal modal-open">
-            <div class="modal-box">
-                <h3 class="font-bold text-lg mb-4">修改实例名称</h3>
-                <div class="form-control w-full">
-                    <label class="label">
-                        <span class="label-text">新名称</span>
-                    </label>
-                    <input type="text"
-                           class="input input-bordered w-full"
-                           x-model="renameForm.instanceName"
-                           placeholder="请输入实例名称"
-                           @keyup.enter="saveRename()">
-                </div>
-                <div class="modal-action">
-                    <button @click="closeRenameModal()" class="btn">取消</button>
-                    <button @click="saveRename()" class="btn btn-primary">保存</button>
+                    <button @click="closeManageModal()" class="btn">关闭</button>
                 </div>
             </div>
         </div>

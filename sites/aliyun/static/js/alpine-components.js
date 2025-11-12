@@ -183,9 +183,9 @@ function ecsInstances() {
         // 当前操作的实例
         currentInstance: null,
         // 模态框状态
-        showDetailModal: false,
-        showRenameModal: false,
+        showManageModal: false,
         showVncModal: false,
+        showRenameForm: false,
         // 重命名表单
         renameForm: {
             instanceName: ''
@@ -395,26 +395,17 @@ function ecsInstances() {
             }
         },
 
-        // 查看详情
-        viewDetail(instance) {
-            this.currentInstance = instance;
-            this.showDetailModal = true;
-        },
-
-        closeDetailModal() {
-            this.showDetailModal = false;
-            this.currentInstance = null;
-        },
-
-        // 重命名
-        openRenameModal(instance) {
+        // 打开管理模态框
+        openManageModal(instance) {
             this.currentInstance = instance;
             this.renameForm.instanceName = instance.InstanceName || '';
-            this.showRenameModal = true;
+            this.showRenameForm = false;
+            this.showManageModal = true;
         },
 
-        closeRenameModal() {
-            this.showRenameModal = false;
+        closeManageModal() {
+            this.showManageModal = false;
+            this.showRenameForm = false;
             this.currentInstance = null;
             this.renameForm.instanceName = '';
         },
@@ -439,7 +430,8 @@ function ecsInstances() {
                     alert(`修改失败：${result.Message}`);
                 } else {
                     alert('修改成功');
-                    this.closeRenameModal();
+                    this.showRenameForm = false;
+                    this.currentInstance.InstanceName = this.renameForm.instanceName;
                     await this.loadInstances(this.currentPage);
                 }
             } catch (error) {

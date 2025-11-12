@@ -1,0 +1,16 @@
+{% extends "layouts/base.html" %}
+{% from "components/resource_manage_macro.html" import render as resource_manage %}
+
+{% block content %}
+<div x-data="ecsManage()">
+    {{ resource_manage() }}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+window.APP_CONFIG = {{ config|json|safe }};
+</script>
+<script src="{{ base_path }}/static/js/aliyun-api.js"></script>
+<script src="{{ base_path }}/static/js/auth.js"></script>
+{% endblock %}

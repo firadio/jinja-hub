@@ -13,14 +13,6 @@
       "endpoint": "https://vpc.{region}.aliyuncs.com/"
     }
   },
-  "regions": [
-    {"id": "cn-hangzhou", "name": "华东1 (杭州)"},
-    {"id": "cn-shanghai", "name": "华东2 (上海)"},
-    {"id": "cn-beijing", "name": "华北2 (北京)"},
-    {"id": "cn-shenzhen", "name": "华南1 (深圳)"},
-    {"id": "cn-guangzhou", "name": "华南2 (广州)"},
-    {"id": "cn-hongkong", "name": "中国香港"}
-  ],
   "pages": {
     "login": {
       "title": "登录",
@@ -314,6 +306,83 @@
           "class": "text-sm",
           "columnType": "datetime"
         }
+      ]
+    }
+  },
+  "resource_manage": {
+    "ecs_instance": {
+      "title": "实例管理",
+      "resourceType": "ECS实例",
+      "idField": "InstanceId",
+      "nameField": "InstanceName",
+      "statusField": "Status",
+      "apiGetFunction": "DescribeInstances",
+      "apiGetDataPath": "Instances.Instance",
+      "infoSections": [
+        {
+          "title": "基本信息",
+          "fields": [
+            {"label": "实例名称", "field": "InstanceName", "defaultValue": "-"},
+            {"label": "实例 ID", "field": "InstanceId", "class": "font-mono text-sm"},
+            {"label": "状态", "field": "Status", "type": "badge"}
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "name": "start",
+          "label": "启动实例",
+          "showWhen": "resource.Status === 'Stopped'",
+          "apiFunction": "StartInstance",
+          "class": "btn-success",
+          "confirmMessage": null
+        },
+        {
+          "name": "stop",
+          "label": "停止实例",
+          "showWhen": "resource.Status === 'Running'",
+          "apiFunction": "StopInstance",
+          "class": "btn-error",
+          "confirmMessage": "确定要停止实例吗？"
+        },
+        {
+          "name": "reboot",
+          "label": "重启实例",
+          "showWhen": "resource.Status === 'Running'",
+          "apiFunction": "RebootInstance",
+          "class": "btn-warning",
+          "confirmMessage": "确定要重启实例吗？"
+        },
+        {
+          "name": "rename",
+          "label": "修改名称",
+          "showWhen": "true",
+          "type": "form",
+          "class": "btn-info"
+        },
+        {
+          "name": "vnc",
+          "label": "VNC 连接",
+          "showWhen": "true",
+          "type": "custom",
+          "class": "btn-secondary"
+        }
+      ],
+      "renameConfig": {
+        "apiFunction": "ModifyInstanceAttribute",
+        "nameField": "InstanceName",
+        "placeholder": "请输入实例名称"
+      },
+      "detailFields": [
+        {"label": "实例规格", "field": "InstanceType"},
+        {"label": "CPU", "field": "Cpu", "suffix": " 核"},
+        {"label": "内存", "field": "Memory", "formatter": "memory"},
+        {"label": "操作系统", "field": "OSName", "fallback": "OSType"},
+        {"label": "私网 IP", "field": "VpcAttributes.PrivateIpAddress.IpAddress[0]", "class": "font-mono text-sm", "defaultValue": "-"},
+        {"label": "公网 IP", "field": "PublicIpAddress.IpAddress[0]", "class": "font-mono text-sm", "defaultValue": "-"},
+        {"label": "EIP 地址", "field": "EipAddress.IpAddress", "class": "font-mono text-sm", "defaultValue": "-"},
+        {"label": "创建时间", "field": "CreationTime", "type": "datetime"},
+        {"label": "到期时间", "field": "ExpiredTime", "type": "datetime"}
       ]
     }
   }
